@@ -63,7 +63,8 @@ defmodule Vereis.MixProject do
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:styler, "~> 1.3", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false}
+      {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
+      {:ex_machina, "~> 2.8", only: :test}
     ]
   end
 

@@ -24,6 +24,7 @@ defmodule Vereis.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Vereis.DataCase
+      import Vereis.Factory
 
       alias Vereis.Repo
     end
