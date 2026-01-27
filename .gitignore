@@ -42,3 +42,17 @@ erl_crash.dump
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Pre-commit / Git hooks
+.pre-commit-config.yaml
+.githooks/
+
+# Dialyzer
+priv/plts/
+
+# Coverage
+cover/
+*.coverdata
+
+# Treefmt
+.treefmt-cache/

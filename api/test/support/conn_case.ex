@@ -19,15 +19,15 @@ defmodule VereisWeb.ConnCase do
 
   using do
     quote do
+      use VereisWeb, :verified_routes
+
+      import Phoenix.ConnTest
+      import Plug.Conn
+      import VereisWeb.ConnCase
       # The default endpoint for testing
       @endpoint VereisWeb.Endpoint
 
-      use VereisWeb, :verified_routes
-
       # Import conveniences for testing with connections
-      import Plug.Conn
-      import Phoenix.ConnTest
-      import VereisWeb.ConnCase
     end
   end
 

@@ -1,12 +1,14 @@
 defmodule VereisWeb.Telemetry do
+  @moduledoc false
   use Supervisor
+
   import Telemetry.Metrics
 
   def start_link(arg) do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
-  @impl true
+  @impl Supervisor
   def init(_arg) do
     children = [
       # Telemetry poller will execute the given period measurements
@@ -71,8 +73,7 @@ defmodule VereisWeb.Telemetry do
       ),
       summary("vereis.repo.query.idle_time",
         unit: {:native, :millisecond},
-        description:
-          "The time the connection spent waiting before being checked out for the query"
+        description: "The time the connection spent waiting before being checked out for the query"
       ),
 
       # VM Metrics

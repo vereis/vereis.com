@@ -7,9 +7,13 @@
 # General application configuration
 import Config
 
-config :vereis,
-  ecto_repos: [Vereis.Repo],
-  generators: [timestamp_type: :utc_datetime]
+# Configure Elixir's Logger
+config :logger, :default_formatter,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
 
 # Configure the endpoint
 config :vereis, VereisWeb.Endpoint,
@@ -22,14 +26,10 @@ config :vereis, VereisWeb.Endpoint,
   pubsub_server: Vereis.PubSub,
   live_view: [signing_salt: "KU5b+ErJ"]
 
-# Configure Elixir's Logger
-config :logger, :default_formatter,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+config :vereis,
+  # Import environment specific config. This must remain at the bottom
+  # of this file so it overrides the configuration defined above.
+  ecto_repos: [Vereis.Repo],
+  generators: [timestamp_type: :utc_datetime]
 
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
-
-# Import environment specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
