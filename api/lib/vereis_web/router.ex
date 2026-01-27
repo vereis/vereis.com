@@ -9,7 +9,9 @@ defmodule VereisWeb.Router do
     pipe_through :api
   end
 
-  # Enable LiveDashboard in development
+  get "/livez", VereisWeb.HealthController, :liveness
+  get "/healthz", VereisWeb.HealthController, :readiness
+
   if Application.compile_env(:vereis, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
     # it behind authentication and allow only admins to access it.
