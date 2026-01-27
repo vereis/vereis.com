@@ -10,7 +10,10 @@ config :phoenix,
 config :vereis, Vereis.Repo,
   database: Path.expand("../vereis_test.db", __DIR__),
   pool_size: 5,
-  pool: Ecto.Adapters.SQL.Sandbox
+  pool: Ecto.Adapters.SQL.Sandbox,
+  timeout: 30_000,
+  ownership_timeout: 30_000,
+  default_transaction_mode: :immediate
 
 config :vereis, VereisWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
