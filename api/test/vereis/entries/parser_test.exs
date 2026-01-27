@@ -3,7 +3,7 @@ defmodule Vereis.Entries.ParserTest do
 
   alias Vereis.Entries.Parser
 
-  describe "parse/1" do
+  describe "parse/2" do
     test "parses frontmatter into flat attrs map" do
       content = """
       ---
@@ -17,7 +17,7 @@ defmodule Vereis.Entries.ParserTest do
       This is the body.
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.title == "My Post"
       assert result.description == "A great post"
       assert result.published_at == "2024-01-15T12:00:00Z"
@@ -33,7 +33,7 @@ defmodule Vereis.Entries.ParserTest do
       Body content.
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.title == "Simple Post"
       assert result.raw_body == "Body content."
     end
@@ -50,7 +50,7 @@ defmodule Vereis.Entries.ParserTest do
 
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.raw_body == "Body with extra newlines."
     end
 
@@ -63,23 +63,25 @@ defmodule Vereis.Entries.ParserTest do
       Body
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.description == "No title here"
       refute Map.has_key?(result, :title)
     end
 
-    test "returns empty map when frontmatter delimiters are missing" do
+    test "returns slug and hash when frontmatter delimiters are missing" do
       content = """
       title: No Delimiters
 
       Body content.
       """
 
-      result = Parser.parse(content)
-      assert result == %{}
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.slug == "/test"
+      assert is_binary(result.source_hash)
+      refute Map.has_key?(result, :title)
     end
 
-    test "returns empty map when YAML is invalid" do
+    test "returns slug and hash when YAML is invalid" do
       content = """
       ---
       title: Test
@@ -89,8 +91,10 @@ defmodule Vereis.Entries.ParserTest do
       Body
       """
 
-      result = Parser.parse(content)
-      assert result == %{}
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.slug == "/test"
+      assert is_binary(result.source_hash)
+      refute Map.has_key?(result, :title)
     end
 
     test "handles empty body" do
@@ -100,7 +104,7 @@ defmodule Vereis.Entries.ParserTest do
       ---
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.raw_body == ""
     end
 
@@ -115,7 +119,7 @@ defmodule Vereis.Entries.ParserTest do
       This is **bold** and this is *italic*.
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.body =~ ~r/<h1.*>Hello World<\/h1>/
       assert result.body =~ "<strong>bold</strong>"
       assert result.body =~ "<em>italic</em>"
@@ -134,7 +138,7 @@ defmodule Vereis.Entries.ParserTest do
       ```
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.body =~ ~r/<pre.*<code class="language-elixir"/
       assert result.body =~ "hello"
       assert result.body =~ ":world"
@@ -152,7 +156,7 @@ defmodule Vereis.Entries.ParserTest do
       [Link](https://example.com)
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.body =~ "<ul>"
       assert result.body =~ "<li>Item 1</li>"
       assert result.body =~ ~r/<a href="https:\/\/example\.com">Link<\/a>/
@@ -167,7 +171,7 @@ defmodule Vereis.Entries.ParserTest do
       ~~strikethrough~~
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.body =~ "<del>strikethrough</del>"
     end
 
@@ -182,7 +186,7 @@ defmodule Vereis.Entries.ParserTest do
       ### Advanced Topics
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
       assert result.body =~ ~r/<h1 id="hello-world"/
       assert result.body =~ ~r/<h2 id="getting-started"/
       assert result.body =~ ~r/<h3 id="advanced-topics"/
@@ -199,7 +203,7 @@ defmodule Vereis.Entries.ParserTest do
       ### Advanced Topics
       """
 
-      result = Parser.parse(content)
+      result = Parser.parse("content/test.md", content, "content")
 
       assert result.headings == [
                %{level: 1, title: "Hello World", link: "hello-world"},
