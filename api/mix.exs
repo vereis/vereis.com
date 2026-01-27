@@ -65,7 +65,10 @@ defmodule Vereis.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
       {:ex_machina, "~> 2.8", only: :test},
-      {:yaml_elixir, "~> 2.11"}
+      {:yaml_elixir, "~> 2.11"},
+      {:mdex, "~> 0.2"},
+      {:floki, "~> 0.36"},
+      {:html5ever, "~> 0.17"}
     ]
   end
 
