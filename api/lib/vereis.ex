@@ -1,9 +1,23 @@
 defmodule Vereis do
-  @moduledoc """
-  Vereis keeps the contexts that define your domain
-  and business logic.
+  @moduledoc false
 
-  Contexts are also responsible for managing your data, regardless
-  if it comes from the database, an external API or others.
-  """
+  @doc "Returns the git SHA of the current version."
+  @spec version() :: String.t()
+  def version do
+    release_sha = System.get_env("RELEASE_SHA")
+
+    if release_sha in [nil, ""] do
+      "git"
+      |> System.cmd(["rev-parse", "HEAD"])
+      |> then(fn {sha, 0} -> String.trim(sha) end)
+    else
+      release_sha
+    end
+  end
+
+  @doc "Returns the current build environment."
+  @spec env() :: atom()
+  def env do
+    Mix.env()
+  end
 end

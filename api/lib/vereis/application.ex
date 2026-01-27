@@ -1,6 +1,4 @@
 defmodule Vereis.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
@@ -13,14 +11,9 @@ defmodule Vereis.Application do
       {Ecto.Migrator, repos: Application.fetch_env!(:vereis, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:vereis, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Vereis.PubSub},
-      # Start a worker by calling: Vereis.Worker.start_link(arg)
-      # {Vereis.Worker, arg},
-      # Start to serve requests, typically the last entry
       VereisWeb.Endpoint
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Vereis.Supervisor]
     Supervisor.start_link(children, opts)
   end
