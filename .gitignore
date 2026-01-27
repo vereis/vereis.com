@@ -48,7 +48,7 @@ yarn-error.log*
 .githooks/
 
 # Dialyzer
-priv/plts/
+**/priv/plts/
 
 # Coverage
 cover/
