@@ -6,6 +6,8 @@ defmodule VereisWeb.GraphQL.Schema do
 
   alias VereisWeb.GraphQL.Resolvers
 
+  import_types VereisWeb.GraphQL.Types.Version
+
   query do
     @desc "Is the API process running?"
     field :liveness, non_null(:boolean) do
@@ -15,6 +17,13 @@ defmodule VereisWeb.GraphQL.Schema do
     @desc "Can the API serve traffic?"
     field :readiness, non_null(:boolean) do
       resolve(&Resolvers.Health.readiness/3)
+    end
+
+    @desc "API version information"
+    field :version, non_null(:version) do
+      resolve(fn _parent, _args, _resolution ->
+        {:ok, %{}}
+      end)
     end
   end
 end
