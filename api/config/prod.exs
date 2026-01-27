@@ -7,6 +7,3 @@ config :vereis, VereisWeb.Endpoint,
   exclude: [
     hosts: ["localhost", "127.0.0.1"]
   ]
-
-# Runtime production configuration, including reading
-# of environment variables, is done on config/runtime.exs.
