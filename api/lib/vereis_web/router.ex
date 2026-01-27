@@ -1,8 +1,21 @@
 defmodule VereisWeb.Router do
   use VereisWeb, :router
 
+  alias VereisWeb.GraphQL.Schema
+
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  scope "/" do
+    pipe_through :api
+    forward "/graphql", Absinthe.Plug, schema: Schema
+
+    if Mix.env() == :dev do
+      forward "/graphiql", Absinthe.Plug.GraphiQL,
+        schema: Schema,
+        interface: :playground
+    end
   end
 
   scope "/api", VereisWeb do
