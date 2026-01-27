@@ -11,11 +11,32 @@ defmodule Vereis.Entries.Parser do
     syntax_highlight: [formatter: {:html_inline, theme: "github_dark"}]
   ]
 
-  @spec parse(String.t()) :: map()
-  def parse(content) when is_binary(content) do
+  @spec parse(String.t(), String.t()) :: map()
+  def parse(filepath, base_dir) when is_binary(filepath) and is_binary(base_dir) do
+    parse(filepath, File.read!(filepath), base_dir)
+  end
+
+  @spec parse(String.t(), String.t(), String.t()) :: map()
+  def parse(filepath, content, base_dir) when is_binary(filepath) and is_binary(content) and is_binary(base_dir) do
     %{}
+    |> Map.put(:slug, derive_slug(filepath, base_dir))
+    |> Map.put(:source_hash, compute_hash(content))
     |> parse_frontmatter(content)
     |> render_markdown()
+  end
+
+  defp derive_slug(filepath, base_dir) do
+    slug =
+      filepath
+      |> Path.relative_to(base_dir)
+      |> Path.rootname()
+      |> then(&("/" <> &1))
+
+    if slug == "/index", do: "/", else: slug
+  end
+
+  defp compute_hash(content) do
+    :sha256 |> :crypto.hash(content) |> Base.encode16(case: :lower)
   end
 
   defp parse_frontmatter(attrs, content) do
