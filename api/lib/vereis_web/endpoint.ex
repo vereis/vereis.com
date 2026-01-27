@@ -27,8 +27,10 @@ defmodule VereisWeb.Endpoint do
     only: VereisWeb.static_paths(),
     raise_on_missing_only: code_reloading?
 
-  # Code reloading can be explicitly enabled under the
-  # :code_reloader configuration of your endpoint.
+  if Code.ensure_loaded?(Tidewave) do
+    plug Tidewave
+  end
+
   if code_reloading? do
     plug Phoenix.CodeReloader
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :vereis
