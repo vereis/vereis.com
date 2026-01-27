@@ -7,6 +7,10 @@
 # General application configuration
 import Config
 
+# SQLite doesn't support concurrent index creation
+config :excellent_migrations,
+  skip_checks: [:index_not_concurrently]
+
 # Configure Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
@@ -27,8 +31,6 @@ config :vereis, VereisWeb.Endpoint,
   live_view: [signing_salt: "KU5b+ErJ"]
 
 config :vereis,
-  # Import environment specific config. This must remain at the bottom
-  # of this file so it overrides the configuration defined above.
   ecto_repos: [Vereis.Repo],
   generators: [timestamp_type: :utc_datetime]
 
