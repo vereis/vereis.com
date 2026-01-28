@@ -25,6 +25,28 @@ defmodule Vereis.Entries do
     filters |> Entry.query() |> Repo.all()
   end
 
+  @spec get_entry_or_stub(String.t()) :: Entry.t() | Stub.t() | nil
+  def get_entry_or_stub(slug) when is_binary(slug) do
+    query = Entry.query(slug: slug, union: Stub.query(slug: slug))
+
+    case Repo.one(from q in subquery(query), limit: 1) do
+      %{type: "entry"} = entry ->
+        entry
+
+      %{type: "stub"} = result ->
+        %Stub{
+          slug: result.slug,
+          id: result.slug,
+          title: Stub.derive_title(result.slug),
+          inserted_at: result.inserted_at,
+          updated_at: result.updated_at
+        }
+
+      nil ->
+        nil
+    end
+  end
+
   @spec update_entry(Entry.t(), map()) :: {:ok, Entry.t()} | {:error, Ecto.Changeset.t()}
   def update_entry(%Entry{} = entry, attrs) do
     entry
@@ -101,7 +123,7 @@ defmodule Vereis.Entries do
 
         entry
         |> Map.from_struct()
-        |> Map.delete(:__meta__)
+        |> Map.drop([:__meta__, :type])
         |> Map.put(:inserted_at, {:placeholder, :now})
         |> Map.put(:updated_at, {:placeholder, :now})
       end)

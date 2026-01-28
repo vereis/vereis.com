@@ -4,6 +4,7 @@ defmodule Vereis.EntriesTest do
   alias Vereis.Entries
   alias Vereis.Entries.Entry
   alias Vereis.Entries.Reference
+  alias Vereis.Repo
 
   describe "get_entry/1" do
     test "returns entry by filters" do
@@ -83,6 +84,85 @@ defmodule Vereis.EntriesTest do
 
       assert is_nil(Entries.get_entry(slug: "/test"))
       assert %Entry{} = Entries.get_entry(slug: "/test", include_deleted: true)
+    end
+  end
+
+  describe "get_entry_or_stub/1" do
+    test "returns entry when entry exists" do
+      entry = insert(:entry, slug: "/elixir", title: "Elixir")
+
+      result = Entries.get_entry_or_stub("/elixir")
+
+      assert %Entry{} = result
+      assert result.id == entry.id
+      assert result.slug == "/elixir"
+      assert result.title == "Elixir"
+    end
+
+    test "returns stub when entry does not exist but has references" do
+      # Create a reference to a non-existent page
+      {:ok, _ref} =
+        %Reference{}
+        |> Reference.changeset(%{
+          source_slug: "/blog",
+          target_slug: "/non-existent",
+          type: :inline
+        })
+        |> Repo.insert()
+
+      result = Entries.get_entry_or_stub("/non-existent")
+
+      assert %Stub{} = result
+      assert result.slug == "/non-existent"
+    end
+
+    test "returns nil when neither entry nor stub exists" do
+      result = Entries.get_entry_or_stub("/totally-missing")
+
+      assert is_nil(result)
+    end
+
+    test "prefers entry over stub when both could exist" do
+      # Create an entry
+      entry = insert(:entry, slug: "/elixir", title: "Elixir")
+
+      # Create a reference to it (which would show up in stubs view if entry didn't exist)
+      {:ok, _ref} =
+        %Reference{}
+        |> Reference.changeset(%{
+          source_slug: "/blog",
+          target_slug: "/elixir",
+          type: :inline
+        })
+        |> Repo.insert()
+
+      result = Entries.get_entry_or_stub("/elixir")
+
+      # Should return the Entry, not a Stub
+      assert %Entry{} = result
+      assert result.id == entry.id
+    end
+
+    test "returns stub when entry is soft-deleted" do
+      # Create an entry and soft delete it
+      entry = insert(:entry, slug: "/deleted", title: "Deleted")
+      {:ok, _} = Entries.delete_entry(entry)
+
+      # Create a reference to it
+      {:ok, _ref} =
+        %Reference{}
+        |> Reference.changeset(%{
+          source_slug: "/blog",
+          target_slug: "/deleted",
+          type: :inline
+        })
+        |> Repo.insert()
+
+      result = Entries.get_entry_or_stub("/deleted")
+
+      # Should return Stub since entry is deleted
+      assert %Stub{} = result
+      assert result.slug == "/deleted"
     end
   end
 
