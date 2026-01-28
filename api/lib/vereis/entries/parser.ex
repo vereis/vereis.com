@@ -57,33 +57,74 @@ defmodule Vereis.Entries.Parser do
 
   defp render_markdown(attrs) do
     with true <- Map.has_key?(attrs, :raw_body),
-         {:ok, ast} <- MDEx.parse_document(attrs.raw_body, @markdown_opts),
+         preprocessed_body = preprocess_wikilinks(attrs.raw_body),
+         {:ok, ast} <- MDEx.parse_document(preprocessed_body, @markdown_opts),
          {:ok, html} <- MDEx.to_html(ast, @markdown_opts),
-         {:ok, {processed_html, headings}} <- postprocess_html(html) do
+         {:ok, {processed_html, headings, inline_refs}} <- postprocess_html(html) do
       attrs
       |> Map.put(:body, processed_html)
       |> Map.put(:headings, headings)
+      |> Map.put(:inline_refs, inline_refs)
     else
       _error ->
         attrs
     end
   end
 
-  defp postprocess_html(html) do
-    with {:ok, ast} <- Floki.parse_document(html, html_parser: Html5ever) do
-      {modified_html, headings} = Floki.traverse_and_update(ast, [], &process_node/2)
-      {:ok, {Floki.raw_html(modified_html), Enum.reverse(headings)}}
+  defp preprocess_wikilinks(markdown) do
+    # Replace [[slug]] with <a data-slug="slug">slug</a>
+    # This preserves the wiki-link for HTML while marking it for extraction
+    Regex.replace(~r/\[\[([^\]]+)\]\]/, markdown, fn _, slug ->
+      normalized_slug = normalize_slug(slug)
+
+      if normalized_slug == "" do
+        # If slug is empty after normalization, keep the original syntax
+        "[[#{slug}]]"
+      else
+        ~s(<a data-slug="#{normalized_slug}">#{slug}</a>)
+      end
+    end)
+  end
+
+  defp normalize_slug(slug) do
+    # Trim and ensure slug starts with /
+    slug = String.trim(slug)
+
+    cond do
+      slug == "" -> ""
+      String.starts_with?(slug, "/") -> slug
+      true -> "/" <> slug
     end
   end
 
-  defp process_node({"h" <> level_str = tag, attrs, children}, acc) when level_str in ["1", "2", "3", "4", "5", "6"] do
+  defp postprocess_html(html) do
+    with {:ok, ast} <- Floki.parse_document(html, html_parser: Html5ever) do
+      {modified_html, {headings, inline_refs}} =
+        Floki.traverse_and_update(ast, {[], []}, &process_node/2)
+
+      {:ok, {Floki.raw_html(modified_html), Enum.reverse(headings), Enum.reverse(inline_refs)}}
+    end
+  end
+
+  defp process_node({"h" <> level_str = tag, attrs, children}, {headings, inline_refs})
+       when level_str in ["1", "2", "3", "4", "5", "6"] do
     level = String.to_integer(level_str)
     title = Floki.text({tag, attrs, children})
     link = slugify(title)
 
     heading = %{level: level, title: title, link: link}
 
-    {{tag, [{"id", link} | attrs], children}, [heading | acc]}
+    {{tag, [{"id", link} | attrs], children}, {[heading | headings], inline_refs}}
+  end
+
+  defp process_node({"a", attrs, _children} = node, {headings, inline_refs}) do
+    case List.keyfind(attrs, "data-slug", 0) do
+      {"data-slug", slug} ->
+        {node, {headings, [slug | inline_refs]}}
+
+      nil ->
+        {node, {headings, inline_refs}}
+    end
   end
 
   defp process_node(other, acc) do
