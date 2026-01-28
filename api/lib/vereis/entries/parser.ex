@@ -5,7 +5,13 @@ defmodule Vereis.Entries.Parser do
   alias Vereis.Entries.Entry
 
   @markdown_opts [
-    extension: [table: true, strikethrough: true, underline: true, shortcodes: true],
+    extension: [
+      table: true,
+      strikethrough: true,
+      underline: true,
+      shortcodes: true,
+      wikilinks_title_after_pipe: true
+    ],
     parse: [smart: true],
     render: [unsafe_: true],
     syntax_highlight: [formatter: {:html_inline, theme: "github_dark"}]
@@ -72,9 +78,7 @@ defmodule Vereis.Entries.Parser do
 
   defp render_markdown(attrs) do
     with true <- Map.has_key?(attrs, :raw_body),
-         preprocessed_body = preprocess_wikilinks(attrs.raw_body),
-         {:ok, ast} <- MDEx.parse_document(preprocessed_body, @markdown_opts),
-         {:ok, html} <- MDEx.to_html(ast, @markdown_opts),
+         {:ok, html} <- MDEx.to_html(attrs.raw_body, @markdown_opts),
          {:ok, {processed_html, headings, inline_refs}} <- postprocess_html(html) do
       attrs
       |> Map.put(:body, processed_html)
@@ -86,23 +90,7 @@ defmodule Vereis.Entries.Parser do
     end
   end
 
-  defp preprocess_wikilinks(markdown) do
-    # Replace [[slug]] with <a data-slug="slug">slug</a>
-    # This preserves the wiki-link for HTML while marking it for extraction
-    Regex.replace(~r/\[\[([^\]]+)\]\]/, markdown, fn _, slug ->
-      normalized_slug = normalize_slug(slug)
-
-      if normalized_slug == "" do
-        # If slug is empty after normalization, keep the original syntax
-        "[[#{slug}]]"
-      else
-        ~s(<a data-slug="#{normalized_slug}">#{slug}</a>)
-      end
-    end)
-  end
-
   defp normalize_slug(slug) do
-    # Trim and ensure slug starts with /
     slug = String.trim(slug)
 
     cond do
@@ -121,7 +109,7 @@ defmodule Vereis.Entries.Parser do
     end
   end
 
-  defp process_node({"h" <> level_str = tag, attrs, children}, {headings, inline_refs})
+  defp process_node({"h" <> level_str = tag, attrs, children}, {headings, refs})
        when level_str in ["1", "2", "3", "4", "5", "6"] do
     level = String.to_integer(level_str)
     title = Floki.text({tag, attrs, children})
@@ -129,16 +117,36 @@ defmodule Vereis.Entries.Parser do
 
     heading = %{level: level, title: title, link: link}
 
-    {{tag, [{"id", link} | attrs], children}, {[heading | headings], inline_refs}}
+    {{tag, [{"id", link} | attrs], children}, {[heading | headings], refs}}
   end
 
-  defp process_node({"a", attrs, _children} = node, {headings, inline_refs}) do
-    case List.keyfind(attrs, "data-slug", 0) do
-      {"data-slug", slug} ->
-        {node, {headings, [slug | inline_refs]}}
+  defp process_node({"a", attrs, children}, {headings, refs}) do
+    case List.keyfind(attrs, "data-wikilink", 0) do
+      {"data-wikilink", "true"} ->
+        case List.keyfind(attrs, "href", 0) do
+          {"href", url} ->
+            normalized_slug = normalize_slug(url)
 
-      nil ->
-        {node, {headings, inline_refs}}
+            if normalized_slug == "" do
+              # Convert empty wikilinks to plain text to preserve [[]]
+              {"[[]]", {headings, refs}}
+            else
+              # Update href to normalized slug and add data-slug attribute
+              attrs =
+                attrs
+                |> List.keyreplace("href", 0, {"href", normalized_slug})
+                |> then(&[{"data-slug", normalized_slug} | &1])
+
+              {{"a", attrs, children}, {headings, [normalized_slug | refs]}}
+            end
+
+          nil ->
+            # No href found, treat as empty wikilink
+            {"[[]]", {headings, refs}}
+        end
+
+      _ ->
+        {{"a", attrs, children}, {headings, refs}}
     end
   end
 

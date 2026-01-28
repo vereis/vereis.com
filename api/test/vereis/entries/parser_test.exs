@@ -340,7 +340,8 @@ defmodule Vereis.Entries.ParserTest do
 
       result = Parser.parse("content/test.md", content, "content")
       assert result.body =~ "elixir/pipes"
-      assert result.body =~ ~s(<a data-slug="/elixir/pipes">elixir/pipes</a>)
+      assert result.body =~ ~s(data-slug="/elixir/pipes")
+      assert result.body =~ ~s(href="/elixir/pipes")
     end
 
     test "handles empty wiki-link" do
