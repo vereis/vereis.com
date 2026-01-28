@@ -24,17 +24,8 @@ defmodule VereisWeb.GraphQL.Types.Entry do
     @desc "Entry title"
     field :title, non_null(:string)
 
-    @desc "Rendered HTML body"
-    field :body, non_null(:string)
-
-    @desc "Original markdown body"
-    field :raw_body, non_null(:string)
-
     @desc "Description or excerpt"
     field :description, :string
-
-    @desc "Table of contents headings"
-    field :headings, list_of(non_null(:heading))
 
     @desc "When the entry was published"
     field :published_at, :datetime
@@ -44,6 +35,15 @@ defmodule VereisWeb.GraphQL.Types.Entry do
 
     @desc "When the entry was last updated"
     field :updated_at, non_null(:datetime)
+
+    @desc "Rendered HTML body (null for stubs)"
+    field :body, :string
+
+    @desc "Original markdown body (null for stubs)"
+    field :raw_body, :string
+
+    @desc "Table of contents headings"
+    field :headings, list_of(non_null(:heading))
   end
 
   @desc "Relay connection for paginated entries"
