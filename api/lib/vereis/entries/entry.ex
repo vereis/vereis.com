@@ -7,6 +7,7 @@ defmodule Vereis.Entries.Entry do
   import Ecto.Changeset
 
   alias Vereis.Entries.Heading
+  alias Vereis.Entries.Reference
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -25,6 +26,14 @@ defmodule Vereis.Entries.Entry do
     field :type, Ecto.Enum, values: [:entry, :stub], default: :entry
 
     embeds_many :headings, Heading
+
+    has_many :references, Reference,
+      foreign_key: :source_slug,
+      references: :slug
+
+    has_many :referenced_by, Reference,
+      foreign_key: :target_slug,
+      references: :slug
 
     timestamps()
   end

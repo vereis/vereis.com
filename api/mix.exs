@@ -64,6 +64,7 @@ defmodule Vereis.MixProject do
       {:absinthe_plug, "~> 1.5"},
       {:absinthe_relay, "~> 1.5"},
       {:absinthe_relay_keyset_connection, "~> 2.1"},
+      {:dataloader, "~> 2.0"},
       {:tidewave, "~> 0.5", only: :dev},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

@@ -1,5 +1,5 @@
 defmodule VereisWeb.GraphQL.EntryTest do
-  use VereisWeb.ConnCase, async: true
+  use VereisWeb.ConnCase, async: false
 
   import Vereis.Factory
 

@@ -9,7 +9,7 @@ defmodule VereisWeb.GraphQL.Schema do
 
   import_types VereisWeb.GraphQL.Types.Scalars
   import_types VereisWeb.GraphQL.Types.Entry
-  import_types VereisWeb.GraphQL.Types.Stub
+  import_types VereisWeb.GraphQL.Types.Reference
   import_types VereisWeb.GraphQL.Types.Version
 
   node interface do
@@ -17,6 +17,16 @@ defmodule VereisWeb.GraphQL.Schema do
       %Vereis.Entries.Entry{}, _ -> :entry
       _, _ -> nil
     end
+  end
+
+  def context(ctx) do
+    loader = Dataloader.add_source(Dataloader.new(), :db, VereisWeb.Dataloader.source())
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
   end
 
   query do

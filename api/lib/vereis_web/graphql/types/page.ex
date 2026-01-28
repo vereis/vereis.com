@@ -4,6 +4,8 @@ defmodule VereisWeb.GraphQL.Types.Page do
   use Absinthe.Schema.Notation
   use Absinthe.Relay.Schema.Notation, :modern
 
+  alias VereisWeb.GraphQL.Resolvers.Entry
+
   @desc "Page type discriminator"
   enum :page_type do
     value(:entry, description: "A full wiki/blog entry")
@@ -32,6 +34,22 @@ defmodule VereisWeb.GraphQL.Types.Page do
 
     @desc "When the page was last updated"
     field :updated_at, non_null(:datetime)
+
+    @desc "Outgoing references from this page"
+    connection field :references, node_type: :reference do
+      arg(:type, :reference_type, description: "Filter by reference type")
+      arg(:target, :page_target, description: "Filter by target type")
+
+      resolve(&Entry.references/3)
+    end
+
+    @desc "Incoming references to this page"
+    connection field :referenced_by, node_type: :reference do
+      arg(:type, :reference_type, description: "Filter by reference type")
+      arg(:target, :page_target, description: "Filter by target type")
+
+      resolve(&Entry.referenced_by/3)
+    end
 
     resolve_type fn
       %Vereis.Entries.Entry{}, _ -> :entry
