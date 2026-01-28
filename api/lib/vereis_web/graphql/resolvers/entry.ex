@@ -32,22 +32,6 @@ defmodule VereisWeb.GraphQL.Resolvers.Entry do
     |> Pagination.paginate(pagination_args)
   end
 
-  def stubs(_parent, %{prefix: prefix}, _resolution) when is_binary(prefix) do
-    {:ok, Entries.list_stubs(prefix: prefix)}
-  end
-
-  def stubs(_parent, _args, _resolution) do
-    {:ok, Entries.list_stubs()}
-  end
-
-  def pages(_parent, %{prefix: prefix}, _resolution) when is_binary(prefix) do
-    {:ok, Entries.list_entries_or_stubs(prefix: prefix)}
-  end
-
-  def pages(_parent, _args, _resolution) do
-    {:ok, Entries.list_entries_or_stubs()}
-  end
-
   def references(parent, args, _resolution) do
     {pagination_args, args} = Pagination.pop_args!(args)
 
