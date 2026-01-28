@@ -22,6 +22,7 @@ defmodule Vereis.Entries.Entry do
     field :published_at, :utc_datetime
     field :source_hash, :string
     field :deleted_at, :utc_datetime
+    field :type, Ecto.Enum, values: [:entry, :stub], default: :entry
 
     embeds_many :headings, Heading
 
@@ -81,7 +82,9 @@ defmodule Vereis.Entries.Entry do
 
   @impl Vereis.Queryable
   def base_query do
-    from e in __MODULE__, as: :self, where: is_nil(e.deleted_at)
+    from e in __MODULE__,
+      as: :self,
+      where: is_nil(e.deleted_at)
   end
 
   @impl Vereis.Queryable

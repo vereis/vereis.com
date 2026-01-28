@@ -12,10 +12,16 @@ defmodule Vereis.Entries.Stub do
   @type t :: %__MODULE__{}
 
   schema "stubs" do
-    field :id, :string, virtual: true
-    field :title, :string, virtual: true
-    field :description, :string, virtual: true
-    field :published_at, :utc_datetime, virtual: true
+    field :id, :binary_id
+    field :title, :string
+    field :body, :string
+    field :raw_body, :string
+    field :description, :string
+    field :published_at, :utc_datetime
+    field :source_hash, :string
+    field :deleted_at, :utc_datetime
+    field :headings, {:array, :map}
+    field :type, Ecto.Enum, values: [:entry, :stub], virtual: true
 
     field :inserted_at, :naive_datetime
     field :updated_at, :naive_datetime
@@ -40,7 +46,24 @@ defmodule Vereis.Entries.Stub do
 
   @impl Vereis.Queryable
   def base_query do
-    from s in __MODULE__, as: :self
+    # Explicit select required for UNION with Entry (different primary keys)
+    from s in __MODULE__,
+      as: :self,
+      select: %__MODULE__{
+        id: s.id,
+        slug: s.slug,
+        title: s.title,
+        body: s.body,
+        raw_body: s.raw_body,
+        description: s.description,
+        published_at: s.published_at,
+        source_hash: s.source_hash,
+        deleted_at: s.deleted_at,
+        headings: s.headings,
+        inserted_at: s.inserted_at,
+        updated_at: s.updated_at
+      },
+      select_merge: %{type: "stub"}
   end
 
   @impl Vereis.Queryable
