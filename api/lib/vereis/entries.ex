@@ -25,59 +25,6 @@ defmodule Vereis.Entries do
     filters |> Entry.query() |> Repo.all()
   end
 
-  @spec get_stub(keyword()) :: Stub.t() | nil
-  def get_stub(filters) when is_list(filters) do
-    with %Stub{} = stub <- filters |> Stub.query() |> Repo.one() do
-      %{stub | title: Stub.derive_title(stub.slug)}
-    end
-  end
-
-  @spec list_stubs(keyword()) :: [Stub.t()]
-  def list_stubs(filters \\ []) when is_list(filters) do
-    filters
-    |> Stub.query()
-    |> Repo.all()
-    |> Enum.map(fn %Stub{} = stub ->
-      %{stub | title: Stub.derive_title(stub.slug)}
-    end)
-  end
-
-  @spec list_entries_or_stubs(keyword()) :: [Entry.t() | Stub.t()]
-  def list_entries_or_stubs(filters \\ []) when is_list(filters) do
-    query = Entry.query(Keyword.put(filters, :union, Stub.query(filters)))
-    results = query |> subquery() |> Repo.all()
-
-    Enum.map(results, fn
-      %{type: "entry"} = entry ->
-        entry
-
-      %{type: "stub"} = result ->
-        result
-        |> Map.from_struct()
-        |> Map.put(:title, Stub.derive_title(result.slug))
-        |> then(&struct(Stub, &1))
-    end)
-  end
-
-  @spec get_entry_or_stub(String.t()) :: Entry.t() | Stub.t() | nil
-  def get_entry_or_stub(slug) when is_binary(slug) do
-    query = Entry.query(slug: slug, union: Stub.query(slug: slug))
-
-    case Repo.one(from q in subquery(query), limit: 1) do
-      %{type: "entry"} = entry ->
-        entry
-
-      %{type: "stub"} = result ->
-        result
-        |> Map.from_struct()
-        |> Map.put(:title, Stub.derive_title(result.slug))
-        |> then(&struct(Stub, &1))
-
-      nil ->
-        nil
-    end
-  end
-
   @spec update_entry(Entry.t(), map()) :: {:ok, Entry.t()} | {:error, Ecto.Changeset.t()}
   def update_entry(%Entry{} = entry, attrs) do
     entry
