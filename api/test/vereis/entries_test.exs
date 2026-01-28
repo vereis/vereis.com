@@ -135,6 +135,18 @@ defmodule Vereis.EntriesTest do
       assert %Stub{} = result
       assert result.slug == "deleted"
     end
+
+    test "raises ArgumentError when :id filter is provided" do
+      assert_raise ArgumentError, "get_entry_or_stub/1 does not support :id filter", fn ->
+        Entries.get_entry_or_stub(id: "some-id", slug: "test")
+      end
+    end
+
+    test "raises ArgumentError when :slug filter is missing" do
+      assert_raise ArgumentError, "get_entry_or_stub/1 requires :slug filter", fn ->
+        Entries.get_entry_or_stub([])
+      end
+    end
   end
 
   describe "import_entries/1" do
