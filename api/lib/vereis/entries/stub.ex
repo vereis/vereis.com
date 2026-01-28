@@ -59,7 +59,7 @@ defmodule Vereis.Entries.Stub do
     from s in __MODULE__,
       as: :self,
       select: %__MODULE__{
-        id: s.id,
+        id: s.slug,
         slug: s.slug,
         title: s.title,
         body: s.body,
