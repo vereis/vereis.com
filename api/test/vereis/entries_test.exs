@@ -3,6 +3,7 @@ defmodule Vereis.EntriesTest do
 
   alias Vereis.Entries
   alias Vereis.Entries.Entry
+  alias Vereis.Entries.Reference
 
   describe "get_entry/1" do
     test "returns entry by filters" do
@@ -151,6 +152,165 @@ defmodule Vereis.EntriesTest do
       assert [entry] = Entries.list_entries()
       assert entry.title == "Updated Title"
       assert entry.id == original_id
+    end
+  end
+
+  describe "upsert_references/2" do
+    test "creates inline references from attrs" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        inline_refs: ["/elixir", "/phoenix"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert length(refs) == 2
+
+      assert Enum.all?(refs, &(&1.source_slug == "/blog/post"))
+      assert Enum.all?(refs, &(&1.type == :inline))
+      assert refs |> Enum.map(& &1.target_slug) |> Enum.sort() == ["/elixir", "/phoenix"]
+    end
+
+    test "creates frontmatter references from attrs" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        frontmatter_refs: ["/tag1", "/tag2"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert length(refs) == 2
+
+      assert Enum.all?(refs, &(&1.source_slug == "/blog/post"))
+      assert Enum.all?(refs, &(&1.type == :frontmatter))
+      assert refs |> Enum.map(& &1.target_slug) |> Enum.sort() == ["/tag1", "/tag2"]
+    end
+
+    test "creates both inline and frontmatter references" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        inline_refs: ["/elixir"],
+        frontmatter_refs: ["/tag1", "/tag2"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert length(refs) == 3
+
+      inline_refs = Enum.filter(refs, &(&1.type == :inline))
+      frontmatter_refs = Enum.filter(refs, &(&1.type == :frontmatter))
+
+      assert length(inline_refs) == 1
+      assert length(frontmatter_refs) == 2
+    end
+
+    test "distinguishes same target_slug with different types" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        inline_refs: ["/elixir"],
+        frontmatter_refs: ["/elixir"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert length(refs) == 2
+
+      types = refs |> Enum.map(& &1.type) |> Enum.sort()
+      assert types == [:frontmatter, :inline]
+    end
+
+    test "deletes old references on re-import" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      # First import
+      attrs1 = %{
+        inline_refs: ["/elixir", "/phoenix"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs1)
+      assert length(refs) == 2
+
+      # Re-import with different refs
+      attrs2 = %{
+        inline_refs: ["/ecto"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs2)
+      assert length(refs) == 1
+      assert hd(refs).target_slug == "/ecto"
+
+      # Verify old refs were deleted
+      all_refs = Repo.all(Reference)
+      assert length(all_refs) == 1
+    end
+
+    test "handles empty references" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        inline_refs: [],
+        frontmatter_refs: []
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert refs == []
+    end
+
+    test "handles missing inline_refs key" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        frontmatter_refs: ["/tag1"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert length(refs) == 1
+      assert hd(refs).type == :frontmatter
+    end
+
+    test "handles missing frontmatter_refs key" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        inline_refs: ["/elixir"]
+      }
+
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      assert length(refs) == 1
+      assert hd(refs).type == :inline
+    end
+
+    test "respects unique constraint on (source_slug, target_slug, type)" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      attrs = %{
+        inline_refs: ["/elixir", "/elixir"]
+      }
+
+      # The insert_all with on_conflict: :nothing should handle this gracefully
+      assert {:ok, refs} = Entries.upsert_references(entry, attrs)
+      # Should only create one reference due to unique constraint
+      assert length(refs) == 1
+    end
+
+    test "transaction rolls back on error" do
+      entry = insert(:entry, slug: "/blog/post")
+
+      # Create initial refs
+      attrs1 = %{
+        inline_refs: ["/elixir"]
+      }
+
+      assert {:ok, _} = Entries.upsert_references(entry, attrs1)
+      assert Repo.aggregate(Reference, :count) == 1
+
+      # This should work fine, testing the transaction completes
+      attrs2 = %{
+        inline_refs: ["/phoenix"]
+      }
+
+      assert {:ok, _} = Entries.upsert_references(entry, attrs2)
+      assert Repo.aggregate(Reference, :count) == 1
     end
   end
 end

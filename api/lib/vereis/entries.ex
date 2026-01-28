@@ -1,8 +1,11 @@
 defmodule Vereis.Entries do
   @moduledoc "Context module for managing wiki/blog entries."
 
+  import Ecto.Query
+
   alias Vereis.Entries.Entry
-  alias Vereis.Entries.Parser
+  alias Vereis.Entries.Importer
+  alias Vereis.Entries.Reference
   alias Vereis.Repo
 
   require Logger
@@ -32,6 +35,52 @@ defmodule Vereis.Entries do
   @spec delete_entry(Entry.t()) :: {:ok, Entry.t()} | {:error, Ecto.Changeset.t()}
   def delete_entry(%Entry{} = entry) do
     update_entry(entry, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
+  end
+
+  @spec upsert_references(Entry.t(), map()) :: {:ok, [Reference.t()]} | {:error, term()}
+  def upsert_references(%Entry{} = entry, attrs) when is_map(attrs) do
+    inline_refs = Map.get(attrs, :inline_refs, [])
+    frontmatter_refs = Map.get(attrs, :frontmatter_refs, [])
+
+    Repo.transaction(fn ->
+      # Delete old references
+      Repo.delete_all(from(r in Reference, where: r.source_slug == ^entry.slug))
+
+      # Build new reference attrs
+      now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+
+      inline_attrs =
+        Enum.map(inline_refs, fn target_slug ->
+          %{
+            source_slug: entry.slug,
+            target_slug: target_slug,
+            type: :inline,
+            inserted_at: now
+          }
+        end)
+
+      frontmatter_attrs =
+        Enum.map(frontmatter_refs, fn target_slug ->
+          %{
+            source_slug: entry.slug,
+            target_slug: target_slug,
+            type: :frontmatter,
+            inserted_at: now
+          }
+        end)
+
+      all_attrs = inline_attrs ++ frontmatter_attrs
+
+      if all_attrs != [] do
+        Repo.insert_all(Reference, all_attrs,
+          on_conflict: :nothing,
+          conflict_target: [:source_slug, :target_slug, :type]
+        )
+      end
+
+      # Return the newly created references
+      Repo.all(from(r in Reference, where: r.source_slug == ^entry.slug))
+    end)
   end
 
   @spec import_entries(String.t()) :: {pos_integer(), nil | [Entry.t()]}
