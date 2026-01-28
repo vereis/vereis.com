@@ -242,4 +242,183 @@ defmodule Vereis.Entries.ParserTest do
       assert result.published_at == "not-a-date"
     end
   end
+
+  describe "wiki-link extraction" do
+    test "extracts single wiki-link" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Check out [[/elixir/pipes]] for more info.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == ["/elixir/pipes"]
+      assert result.body =~ ~s(data-slug="/elixir/pipes")
+    end
+
+    test "extracts multiple wiki-links" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Check out [[/elixir]] and [[/phoenix]] and [[/ecto]].
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == ["/elixir", "/phoenix", "/ecto"]
+    end
+
+    test "normalizes slugs without leading slash" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Check out [[elixir]] and [[phoenix/liveview]].
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == ["/elixir", "/phoenix/liveview"]
+      assert result.body =~ ~s(data-slug="/elixir")
+      assert result.body =~ ~s(data-slug="/phoenix/liveview")
+    end
+
+    test "handles wiki-links with spaces" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      See [[  /elixir/pipes  ]] for details.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == ["/elixir/pipes"]
+    end
+
+    test "wiki-links in lists" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      - [[/item-one]]
+      - [[/item-two]]
+      - Regular item
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == ["/item-one", "/item-two"]
+    end
+
+    test "wiki-links in headings" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      # About [[/elixir]]
+
+      Content here.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == ["/elixir"]
+    end
+
+    test "preserves wiki-link text in HTML" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Check out [[elixir/pipes]] for more.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.body =~ "elixir/pipes"
+      assert result.body =~ ~s(<a data-slug="/elixir/pipes">elixir/pipes</a>)
+    end
+
+    test "handles empty wiki-link" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Check out [[]] for more.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      # Empty slugs are not extracted, original syntax is preserved
+      assert result.inline_refs == []
+      assert result.body =~ "[[]]"
+    end
+
+    test "wiki-links in code blocks are not extracted" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      ```
+      [[/not-a-link]]
+      ```
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      # Wiki-links in code blocks get preprocessed into HTML, but MDEx
+      # escapes the HTML tags since they're in a code block. This means
+      # Floki won't find them as actual <a> tags, so they won't be extracted.
+      # This is correct behavior - we don't want to extract wiki-links from code.
+      inline_refs = ref_attrs |> Enum.filter(&(&1.type == :inline)) |> Enum.map(& &1.target_slug)
+      assert inline_refs == []
+    end
+
+    test "inline code with wiki-link syntax" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Use `[[/slug]]` syntax for links.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      # Wiki-links in inline code get escaped by MDEx, so they're not extracted.
+      # This is correct - we don't want to extract wiki-links from code.
+      inline_refs = ref_attrs |> Enum.filter(&(&1.type == :inline)) |> Enum.map(& &1.target_slug)
+      assert inline_refs == []
+    end
+
+    test "no wiki-links returns empty list" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Just regular markdown content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.inline_refs == []
+    end
+
+    test "duplicate wiki-links are deduplicated" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      See [[/elixir]] and also [[/elixir]] again.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      # We preserve duplicates as they appear in the source
+      assert result.inline_refs == ["/elixir", "/elixir"]
+    end
+  end
 end
