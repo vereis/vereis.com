@@ -100,15 +100,7 @@ defmodule Vereis.EntriesTest do
     end
 
     test "returns stub when entry does not exist but has references" do
-      # Create a reference to a non-existent page
-      {:ok, _ref} =
-        %Reference{}
-        |> Reference.changeset(%{
-          source_slug: "/blog",
-          target_slug: "/non-existent",
-          type: :inline
-        })
-        |> Repo.insert()
+      insert(:reference, source_slug: "/blog", target_slug: "/non-existent", type: :inline)
 
       result = Entries.get_entry_or_stub("/non-existent")
 
@@ -123,44 +115,23 @@ defmodule Vereis.EntriesTest do
     end
 
     test "prefers entry over stub when both could exist" do
-      # Create an entry
       entry = insert(:entry, slug: "/elixir", title: "Elixir")
-
-      # Create a reference to it (which would show up in stubs view if entry didn't exist)
-      {:ok, _ref} =
-        %Reference{}
-        |> Reference.changeset(%{
-          source_slug: "/blog",
-          target_slug: "/elixir",
-          type: :inline
-        })
-        |> Repo.insert()
+      insert(:reference, source_slug: "/blog", target_slug: "/elixir", type: :inline)
 
       result = Entries.get_entry_or_stub("/elixir")
 
-      # Should return the Entry, not a Stub
       assert %Entry{} = result
       assert result.id == entry.id
     end
 
     test "returns stub when entry is soft-deleted" do
-      # Create an entry and soft delete it
       entry = insert(:entry, slug: "/deleted", title: "Deleted")
       {:ok, _} = Entries.delete_entry(entry)
 
-      # Create a reference to it
-      {:ok, _ref} =
-        %Reference{}
-        |> Reference.changeset(%{
-          source_slug: "/blog",
-          target_slug: "/deleted",
-          type: :inline
-        })
-        |> Repo.insert()
+      insert(:reference, source_slug: "/blog", target_slug: "/deleted", type: :inline)
 
       result = Entries.get_entry_or_stub("/deleted")
 
-      # Should return Stub since entry is deleted
       assert %Stub{} = result
       assert result.slug == "/deleted"
     end
