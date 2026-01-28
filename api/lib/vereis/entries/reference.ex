@@ -92,5 +92,4 @@ defmodule Vereis.Entries.Reference do
         apply_filter(query, filter)
     end)
   end
-
 end

@@ -25,6 +25,55 @@ defmodule Vereis.Entries do
     filters |> Entry.query() |> Repo.all()
   end
 
+  @spec get_stub(keyword()) :: Stub.t() | nil
+  def get_stub(filters) when is_list(filters) do
+    case filters |> Stub.query() |> Repo.one() do
+      nil ->
+        nil
+
+      stub ->
+        %Stub{
+          slug: stub.slug,
+          id: stub.slug,
+          title: Stub.derive_title(stub.slug),
+          body: stub.body,
+          raw_body: stub.raw_body,
+          description: stub.description,
+          published_at: stub.published_at,
+          source_hash: stub.source_hash,
+          deleted_at: stub.deleted_at,
+          headings: stub.headings,
+          inserted_at: stub.inserted_at,
+          updated_at: stub.updated_at
+        }
+    end
+  end
+
+  @spec list_stubs(keyword()) :: [Stub.t()]
+  def list_stubs(filters \\ []) when is_list(filters) do
+    filters |> Stub.query() |> Repo.all()
+  end
+
+  @spec list_entries_or_stubs(keyword()) :: [Entry.t() | Stub.t()]
+  def list_entries_or_stubs(filters \\ []) when is_list(filters) do
+    query = Entry.query(Keyword.put(filters, :union, Stub.query(filters)))
+    results = query |> subquery() |> Repo.all()
+
+    Enum.map(results, fn
+      %{type: "entry"} = entry ->
+        entry
+
+      %{type: "stub"} = result ->
+        %Stub{
+          slug: result.slug,
+          id: result.slug,
+          title: Stub.derive_title(result.slug),
+          inserted_at: result.inserted_at,
+          updated_at: result.updated_at
+        }
+    end)
+  end
+
   @spec get_entry_or_stub(String.t()) :: Entry.t() | Stub.t() | nil
   def get_entry_or_stub(slug) when is_binary(slug) do
     query = Entry.query(slug: slug, union: Stub.query(slug: slug))
@@ -57,6 +106,42 @@ defmodule Vereis.Entries do
   @spec delete_entry(Entry.t()) :: {:ok, Entry.t()} | {:error, Ecto.Changeset.t()}
   def delete_entry(%Entry{} = entry) do
     update_entry(entry, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
+  end
+
+  @spec list_references(Entry.t() | Stub.t(), keyword()) :: [Reference.t()]
+  def list_references(page, filters \\ [])
+
+  def list_references(%Entry{slug: slug}, filters) do
+    list_references_by_slug(slug, filters)
+  end
+
+  def list_references(%Stub{slug: slug}, filters) do
+    list_references_by_slug(slug, filters)
+  end
+
+  defp list_references_by_slug(slug, filters) do
+    direction = Keyword.get(filters, :direction, :outgoing)
+    filters = Keyword.delete(filters, :direction)
+
+    case_result =
+      case direction do
+        :outgoing -> Keyword.put(filters, :source_slug, slug)
+        :incoming -> Keyword.put(filters, :target_slug, slug)
+      end
+
+    case_result
+    |> Reference.query()
+    |> Repo.all()
+  end
+
+  def list_references(%Entry{slug: slug}, filters) when is_list(filters) do
+    direction = Keyword.get(filters, :direction, :outgoing)
+    list_references(Keyword.merge(filters, slug: slug, direction: direction))
+  end
+
+  def list_references(%Stub{slug: slug}, filters) when is_list(filters) do
+    direction = Keyword.get(filters, :direction, :outgoing)
+    list_references(Keyword.merge(filters, slug: slug, direction: direction))
   end
 
   @spec upsert_references(Entry.t(), map()) :: {:ok, [Reference.t()]} | {:error, term()}
@@ -123,7 +208,7 @@ defmodule Vereis.Entries do
 
         entry
         |> Map.from_struct()
-        |> Map.drop([:__meta__, :type])
+        |> Map.drop([:__meta__, :type, :references, :referenced_by])
         |> Map.put(:inserted_at, {:placeholder, :now})
         |> Map.put(:updated_at, {:placeholder, :now})
       end)

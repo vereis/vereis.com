@@ -2,8 +2,10 @@ defmodule VereisWeb.GraphQL.Types.Stub do
   @moduledoc "Stub (referenced but non-existent entry) GraphQL type."
 
   use Absinthe.Schema.Notation
+  use Absinthe.Relay.Schema.Notation, :modern
 
   alias Vereis.Entries.Stub
+  alias VereisWeb.GraphQL.Resolvers.Entry
 
   @desc "A stub page (referenced but not yet created)"
   object :stub do
@@ -33,5 +35,21 @@ defmodule VereisWeb.GraphQL.Types.Stub do
 
     @desc "When the stub was last referenced"
     field :updated_at, non_null(:datetime)
+
+    @desc "Outgoing references from this page"
+    connection field :references, node_type: :reference do
+      arg(:type, :reference_type, description: "Filter by reference type")
+      arg(:target, :page_target, description: "Filter by target type")
+
+      resolve(&Entry.references/3)
+    end
+
+    @desc "Incoming references to this page"
+    connection field :referenced_by, node_type: :reference do
+      arg(:type, :reference_type, description: "Filter by reference type")
+      arg(:target, :page_target, description: "Filter by target type")
+
+      resolve(&Entry.referenced_by/3)
+    end
   end
 end

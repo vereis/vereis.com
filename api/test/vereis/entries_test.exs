@@ -1,5 +1,5 @@
 defmodule Vereis.EntriesTest do
-  use Vereis.DataCase, async: true
+  use Vereis.DataCase, async: false
 
   alias Vereis.Entries
   alias Vereis.Entries.Entry

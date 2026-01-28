@@ -6,6 +6,8 @@ defmodule Vereis.Entries.Stub do
 
   import Ecto.Query
 
+  alias Vereis.Entries.Reference
+
   @primary_key {:slug, :string, autogenerate: false}
   @foreign_key_type :string
 
@@ -23,8 +25,15 @@ defmodule Vereis.Entries.Stub do
     field :headings, {:array, :map}
     field :type, Ecto.Enum, values: [:entry, :stub], virtual: true
 
-    field :inserted_at, :naive_datetime
-    field :updated_at, :naive_datetime
+    has_many :references, Reference,
+      foreign_key: :source_slug,
+      references: :slug
+
+    has_many :referenced_by, Reference,
+      foreign_key: :target_slug,
+      references: :slug
+
+    timestamps()
   end
 
   @spec derive_title(String.t()) :: String.t()

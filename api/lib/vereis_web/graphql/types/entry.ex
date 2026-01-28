@@ -4,6 +4,8 @@ defmodule VereisWeb.GraphQL.Types.Entry do
   use Absinthe.Schema.Notation
   use Absinthe.Relay.Schema.Notation, :modern
 
+  alias VereisWeb.GraphQL.Resolvers.Entry, as: EntryResolver
+
   @desc "A heading extracted from an entry's markdown"
   object :heading do
     @desc "Heading level (1-6)"
@@ -44,6 +46,22 @@ defmodule VereisWeb.GraphQL.Types.Entry do
 
     @desc "Table of contents headings"
     field :headings, list_of(non_null(:heading))
+
+    @desc "Outgoing references from this entry"
+    connection field :references, node_type: :reference do
+      arg :type, :reference_type, description: "Filter by reference type"
+      arg :order_by, list_of(:reference_order_by), description: "Sort references"
+
+      resolve &EntryResolver.references/3
+    end
+
+    @desc "Incoming references to this entry (backlinks)"
+    connection field :referenced_by, node_type: :reference do
+      arg :type, :reference_type, description: "Filter by reference type"
+      arg :order_by, list_of(:reference_order_by), description: "Sort references"
+
+      resolve &EntryResolver.referenced_by/3
+    end
   end
 
   @desc "Relay connection for paginated entries"
