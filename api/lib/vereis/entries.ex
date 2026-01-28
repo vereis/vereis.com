@@ -27,31 +27,19 @@ defmodule Vereis.Entries do
 
   @spec get_stub(keyword()) :: Stub.t() | nil
   def get_stub(filters) when is_list(filters) do
-    case filters |> Stub.query() |> Repo.one() do
-      nil ->
-        nil
-
-      stub ->
-        %Stub{
-          slug: stub.slug,
-          id: stub.slug,
-          title: Stub.derive_title(stub.slug),
-          body: stub.body,
-          raw_body: stub.raw_body,
-          description: stub.description,
-          published_at: stub.published_at,
-          source_hash: stub.source_hash,
-          deleted_at: stub.deleted_at,
-          headings: stub.headings,
-          inserted_at: stub.inserted_at,
-          updated_at: stub.updated_at
-        }
+    with %Stub{} = stub <- filters |> Stub.query() |> Repo.one() do
+      %{stub | title: Stub.derive_title(stub.slug)}
     end
   end
 
   @spec list_stubs(keyword()) :: [Stub.t()]
   def list_stubs(filters \\ []) when is_list(filters) do
-    filters |> Stub.query() |> Repo.all()
+    filters
+    |> Stub.query()
+    |> Repo.all()
+    |> Enum.map(fn %Stub{} = stub ->
+      %{stub | title: Stub.derive_title(stub.slug)}
+    end)
   end
 
   @spec list_entries_or_stubs(keyword()) :: [Entry.t() | Stub.t()]
@@ -64,13 +52,10 @@ defmodule Vereis.Entries do
         entry
 
       %{type: "stub"} = result ->
-        %Stub{
-          slug: result.slug,
-          id: result.slug,
-          title: Stub.derive_title(result.slug),
-          inserted_at: result.inserted_at,
-          updated_at: result.updated_at
-        }
+        result
+        |> Map.from_struct()
+        |> Map.put(:title, Stub.derive_title(result.slug))
+        |> then(&struct(Stub, &1))
     end)
   end
 
@@ -83,13 +68,10 @@ defmodule Vereis.Entries do
         entry
 
       %{type: "stub"} = result ->
-        %Stub{
-          slug: result.slug,
-          id: result.slug,
-          title: Stub.derive_title(result.slug),
-          inserted_at: result.inserted_at,
-          updated_at: result.updated_at
-        }
+        result
+        |> Map.from_struct()
+        |> Map.put(:title, Stub.derive_title(result.slug))
+        |> then(&struct(Stub, &1))
 
       nil ->
         nil
