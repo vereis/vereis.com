@@ -581,6 +581,300 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
   end
 
+  describe "references field (Relay connection)" do
+    test "returns empty connection when entry has no references", %{conn: conn} do
+      insert(:entry, slug: "no-refs", title: "No Refs")
+
+      query = """
+      {
+        entry(slug: "no-refs") {
+          references(first: 10) {
+            edges {
+              node {
+                targetSlug
+                type
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      assert %{
+               "data" => %{
+                 "entry" => %{
+                   "references" => %{
+                     "edges" => [],
+                     "pageInfo" => %{"hasNextPage" => false}
+                   }
+                 }
+               }
+             } = json_response(conn, 200)
+    end
+
+    test "returns outgoing references with pagination", %{conn: conn} do
+      insert(:entry, slug: "source", title: "Source")
+      insert(:stub, slug: "target1")
+      insert(:stub, slug: "target2")
+      insert(:entry, slug: "other")
+      insert(:stub, slug: "target3")
+      insert(:reference, source_slug: "source", target_slug: "target1", type: :inline)
+      insert(:reference, source_slug: "source", target_slug: "target2", type: :inline)
+      insert(:reference, source_slug: "other", target_slug: "target3", type: :inline)
+
+      query = """
+      {
+        entry(slug: "source") {
+          references(first: 10) {
+            edges {
+              node {
+                sourceSlug
+                targetSlug
+                type
+              }
+              cursor
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      response = json_response(conn, 200)
+      assert %{"data" => %{"entry" => %{"references" => connection}}} = response
+      assert length(connection["edges"]) == 2
+
+      target_slugs = Enum.map(connection["edges"], fn edge -> edge["node"]["targetSlug"] end)
+      assert "target1" in target_slugs
+      assert "target2" in target_slugs
+      refute "target3" in target_slugs
+
+      # All should have same source
+      assert Enum.all?(connection["edges"], fn edge -> edge["node"]["sourceSlug"] == "source" end)
+
+      # Verify cursors exist
+      assert Enum.all?(connection["edges"], fn edge -> is_binary(edge["cursor"]) end)
+    end
+
+    test "supports filtering references by type", %{conn: conn} do
+      insert(:entry, slug: "source", title: "Source")
+      insert(:stub, slug: "inline1")
+      insert(:stub, slug: "inline2")
+      insert(:stub, slug: "frontmatter1")
+      insert(:reference, source_slug: "source", target_slug: "inline1", type: :inline)
+      insert(:reference, source_slug: "source", target_slug: "inline2", type: :inline)
+      insert(:reference, source_slug: "source", target_slug: "frontmatter1", type: :frontmatter)
+
+      query = """
+      {
+        entry(slug: "source") {
+          references(first: 10, type: INLINE) {
+            edges {
+              node {
+                targetSlug
+                type
+              }
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      response = json_response(conn, 200)
+      assert %{"data" => %{"entry" => %{"references" => connection}}} = response
+      assert length(connection["edges"]) == 2
+
+      assert Enum.all?(connection["edges"], fn edge -> edge["node"]["type"] == "INLINE" end)
+    end
+
+    test "batches references for multiple entries (N+1 prevention)", %{conn: conn} do
+      insert(:entry, slug: "entry1", title: "Entry 1")
+      insert(:entry, slug: "entry2", title: "Entry 2")
+      insert(:stub, slug: "target1")
+      insert(:stub, slug: "target2")
+      insert(:reference, source_slug: "entry1", target_slug: "target1", type: :inline)
+      insert(:reference, source_slug: "entry2", target_slug: "target2", type: :inline)
+
+      query = """
+      {
+        entries(first: 10, type: ENTRY) {
+          edges {
+            node {
+              slug
+              references(first: 10) {
+                edges {
+                  node {
+                    targetSlug
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      response = json_response(conn, 200)
+      assert %{"data" => %{"entries" => %{"edges" => entries}}} = response
+      assert length(entries) == 2
+
+      # Verify each entry has its correct references
+      entry1 = Enum.find(entries, fn e -> e["node"]["slug"] == "entry1" end)
+      entry2 = Enum.find(entries, fn e -> e["node"]["slug"] == "entry2" end)
+
+      assert [%{"node" => %{"targetSlug" => "target1"}}] = entry1["node"]["references"]["edges"]
+      assert [%{"node" => %{"targetSlug" => "target2"}}] = entry2["node"]["references"]["edges"]
+    end
+  end
+
+  describe "referenced_by field (Relay connection)" do
+    test "returns empty connection when entry has no incoming references", %{conn: conn} do
+      insert(:entry, slug: "lonely", title: "Lonely")
+
+      query = """
+      {
+        entry(slug: "lonely") {
+          referencedBy(first: 10) {
+            edges {
+              node {
+                sourceSlug
+                type
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      assert %{
+               "data" => %{
+                 "entry" => %{
+                   "referencedBy" => %{
+                     "edges" => [],
+                     "pageInfo" => %{"hasNextPage" => false}
+                   }
+                 }
+               }
+             } = json_response(conn, 200)
+    end
+
+    test "returns incoming references with pagination", %{conn: conn} do
+      insert(:entry, slug: "target", title: "Target")
+      insert(:entry, slug: "source1")
+      insert(:entry, slug: "source2")
+      insert(:entry, slug: "source3")
+      insert(:stub, slug: "other")
+      insert(:reference, source_slug: "source1", target_slug: "target", type: :inline)
+      insert(:reference, source_slug: "source2", target_slug: "target", type: :inline)
+      insert(:reference, source_slug: "source3", target_slug: "other", type: :inline)
+
+      query = """
+      {
+        entry(slug: "target") {
+          referencedBy(first: 10) {
+            edges {
+              node {
+                sourceSlug
+                targetSlug
+                type
+              }
+              cursor
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      response = json_response(conn, 200)
+      assert %{"data" => %{"entry" => %{"referencedBy" => connection}}} = response
+      assert length(connection["edges"]) == 2
+
+      source_slugs = Enum.map(connection["edges"], fn edge -> edge["node"]["sourceSlug"] end)
+      assert "source1" in source_slugs
+      assert "source2" in source_slugs
+      refute "source3" in source_slugs
+
+      # All should have same target
+      assert Enum.all?(connection["edges"], fn edge -> edge["node"]["targetSlug"] == "target" end)
+    end
+
+    test "supports filtering referenced_by by type", %{conn: conn} do
+      insert(:entry, slug: "target", title: "Target")
+      insert(:entry, slug: "source1")
+      insert(:entry, slug: "source2")
+      insert(:reference, source_slug: "source1", target_slug: "target", type: :inline)
+      insert(:reference, source_slug: "source2", target_slug: "target", type: :frontmatter)
+
+      query = """
+      {
+        entry(slug: "target") {
+          referencedBy(first: 10, type: FRONTMATTER) {
+            edges {
+              node {
+                sourceSlug
+                type
+              }
+            }
+          }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/graphql", %{query: query})
+
+      response = json_response(conn, 200)
+      assert %{"data" => %{"entry" => %{"referencedBy" => connection}}} = response
+      assert length(connection["edges"]) == 1
+      assert hd(connection["edges"])["node"]["type"] == "FRONTMATTER"
+    end
+  end
+
   describe "node query (Relay)" do
     test "fetches entry by global ID", %{conn: conn} do
       _entry = insert(:entry, slug: "node-test", title: "Node Test")
