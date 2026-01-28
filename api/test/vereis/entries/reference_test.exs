@@ -9,8 +9,8 @@ defmodule Vereis.Entries.ReferenceTest do
   describe "changeset/2" do
     test "valid reference with all fields" do
       attrs = %{
-        source_slug: "/blog/post",
-        target_slug: "/elixir/pipes",
+        source_slug: "blog/post",
+        target_slug: "elixir/pipes",
         type: :inline
       }
 
@@ -20,8 +20,8 @@ defmodule Vereis.Entries.ReferenceTest do
 
     test "valid reference with frontmatter type" do
       attrs = %{
-        source_slug: "/blog/post",
-        target_slug: "/elixir",
+        source_slug: "blog/post",
+        target_slug: "elixir",
         type: :frontmatter
       }
 
@@ -29,10 +29,10 @@ defmodule Vereis.Entries.ReferenceTest do
       assert changeset.valid?
     end
 
-    test "valid reference with root slug" do
+    test "valid reference with index slug" do
       attrs = %{
-        source_slug: "/",
-        target_slug: "/blog",
+        source_slug: "index",
+        target_slug: "blog",
         type: :inline
       }
 
@@ -42,7 +42,7 @@ defmodule Vereis.Entries.ReferenceTest do
 
     test "requires source_slug" do
       attrs = %{
-        target_slug: "/target",
+        target_slug: "target",
         type: :inline
       }
 
@@ -53,7 +53,7 @@ defmodule Vereis.Entries.ReferenceTest do
 
     test "requires target_slug" do
       attrs = %{
-        source_slug: "/source",
+        source_slug: "source",
         type: :inline
       }
 
@@ -64,8 +64,8 @@ defmodule Vereis.Entries.ReferenceTest do
 
     test "requires type" do
       attrs = %{
-        source_slug: "/source",
-        target_slug: "/target"
+        source_slug: "source",
+        target_slug: "target"
       }
 
       changeset = Reference.changeset(%Reference{}, attrs)
@@ -75,18 +75,18 @@ defmodule Vereis.Entries.ReferenceTest do
 
     test "validates source_slug format" do
       valid_slugs = [
-        "/",
-        "/simple",
-        "/with-hyphens",
-        "/with_underscores",
-        "/path/to/entry"
+        "index",
+        "simple",
+        "with-hyphens",
+        "with_underscores",
+        "path/to/entry"
       ]
 
       for slug <- valid_slugs do
         changeset =
           Reference.changeset(%Reference{}, %{
             source_slug: slug,
-            target_slug: "/target",
+            target_slug: "target",
             type: :inline
           })
 
@@ -96,18 +96,19 @@ defmodule Vereis.Entries.ReferenceTest do
 
     test "rejects invalid source_slug formats" do
       invalid_slugs = [
-        "no-leading-slash",
-        "/UPPERCASE",
-        "/With Spaces",
-        "/special!chars",
-        "/trailing-slash/"
+        "",
+        "UPPERCASE",
+        "With Spaces",
+        "special!chars",
+        "trailing-slash/",
+        "/leading-slash"
       ]
 
       for slug <- invalid_slugs do
         changeset =
           Reference.changeset(%Reference{}, %{
             source_slug: slug,
-            target_slug: "/target",
+            target_slug: "target",
             type: :inline
           })
 
@@ -123,8 +124,8 @@ defmodule Vereis.Entries.ReferenceTest do
       insert(:entry, slug: "target")
 
       attrs = %{
-        source_slug: "/source",
-        target_slug: "/target",
+        source_slug: "source",
+        target_slug: "target",
         type: :inline
       }
 
@@ -139,8 +140,8 @@ defmodule Vereis.Entries.ReferenceTest do
       insert(:entry, slug: "target")
 
       base_attrs = %{
-        source_slug: "/source",
-        target_slug: "/target"
+        source_slug: "source",
+        target_slug: "target"
       }
 
       {:ok, _} =

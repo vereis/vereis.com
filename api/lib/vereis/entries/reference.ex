@@ -41,21 +41,17 @@ defmodule Vereis.Entries.Reference do
       is_nil(slug) ->
         changeset
 
-      slug == "/" ->
-        changeset
+      slug == "" ->
+        add_error(changeset, field, "can't be blank")
 
-      not String.starts_with?(slug, "/") ->
-        add_error(changeset, field, "must start with /")
+      String.starts_with?(slug, "/") ->
+        add_error(changeset, field, "must not start with /")
 
       String.ends_with?(slug, "/") ->
         add_error(changeset, field, "must not end with /")
 
-      not String.match?(slug, ~r/^\/[a-z0-9_\/-]+$/) ->
-        add_error(
-          changeset,
-          field,
-          "must be lowercase alphanumeric with hyphens, underscores, or slashes"
-        )
+      not String.match?(slug, ~r/^[a-z0-9_\/-]+$/) ->
+        add_error(changeset, field, "must be lowercase alphanumeric with hyphens, underscores, or slashes")
 
       true ->
         changeset

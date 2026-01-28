@@ -13,29 +13,29 @@ defmodule Vereis.Entries.StubTest do
       {:ok, _ref} =
         %Reference{}
         |> Reference.changeset(%{
-          source_slug: "/blog",
-          target_slug: "/non-existent",
+          source_slug: "blog",
+          target_slug: "non-existent",
           type: :inline
         })
         |> Repo.insert()
 
       stubs = Repo.all(Stub)
       assert length(stubs) == 1
-      assert hd(stubs).slug == "/non-existent"
+      assert hd(stubs).slug == "non-existent"
     end
 
     test "excludes target_slug when corresponding entry exists" do
       # Create an entry
       {:ok, entry} =
         %Entry{}
-        |> Entry.changeset(%{slug: "/elixir", title: "Elixir"})
+        |> Entry.changeset(%{slug: "elixir", title: "Elixir"})
         |> Repo.insert()
 
       # Create a reference to it
       {:ok, _ref} =
         %Reference{}
         |> Reference.changeset(%{
-          source_slug: "/blog",
+          source_slug: "blog",
           target_slug: entry.slug,
           type: :inline
         })
@@ -49,14 +49,14 @@ defmodule Vereis.Entries.StubTest do
       # Create an entry
       {:ok, entry} =
         %Entry{}
-        |> Entry.changeset(%{slug: "/deleted", title: "Deleted"})
+        |> Entry.changeset(%{slug: "deleted", title: "Deleted"})
         |> Repo.insert()
 
       # Create a reference to it
       {:ok, _ref} =
         %Reference{}
         |> Reference.changeset(%{
-          source_slug: "/blog",
+          source_slug: "blog",
           target_slug: entry.slug,
           type: :inline
         })
@@ -71,7 +71,7 @@ defmodule Vereis.Entries.StubTest do
       # Now it should appear as a stub
       stubs = Repo.all(Stub)
       assert length(stubs) == 1
-      assert hd(stubs).slug == "/deleted"
+      assert hd(stubs).slug == "deleted"
     end
 
     test "deduplicates target_slug across multiple references" do
@@ -79,8 +79,8 @@ defmodule Vereis.Entries.StubTest do
       {:ok, _ref1} =
         %Reference{}
         |> Reference.changeset(%{
-          source_slug: "/blog/post1",
-          target_slug: "/tag",
+          source_slug: "blog/post1",
+          target_slug: "tag",
           type: :inline
         })
         |> Repo.insert()
@@ -88,15 +88,15 @@ defmodule Vereis.Entries.StubTest do
       {:ok, _ref2} =
         %Reference{}
         |> Reference.changeset(%{
-          source_slug: "/blog/post2",
-          target_slug: "/tag",
+          source_slug: "blog/post2",
+          target_slug: "tag",
           type: :frontmatter
         })
         |> Repo.insert()
 
       stubs = Repo.all(Stub)
       assert length(stubs) == 1
-      assert hd(stubs).slug == "/tag"
+      assert hd(stubs).slug == "tag"
     end
 
     test "tracks inserted_at as MIN of reference inserted_at" do
@@ -106,8 +106,8 @@ defmodule Vereis.Entries.StubTest do
       # Create first reference
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog/post1",
-        target_slug: "/tag",
+        source_slug: "blog/post1",
+        target_slug: "tag",
         type: :inline
       })
       |> Ecto.Changeset.put_change(:inserted_at, later)
@@ -116,8 +116,8 @@ defmodule Vereis.Entries.StubTest do
       # Create second reference (earlier)
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog/post2",
-        target_slug: "/tag",
+        source_slug: "blog/post2",
+        target_slug: "tag",
         type: :frontmatter
       })
       |> Ecto.Changeset.put_change(:inserted_at, now)
@@ -134,8 +134,8 @@ defmodule Vereis.Entries.StubTest do
       # Create first reference
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog/post1",
-        target_slug: "/tag",
+        source_slug: "blog/post1",
+        target_slug: "tag",
         type: :inline
       })
       |> Ecto.Changeset.put_change(:inserted_at, now)
@@ -144,8 +144,8 @@ defmodule Vereis.Entries.StubTest do
       # Create second reference (later)
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog/post2",
-        target_slug: "/tag",
+        source_slug: "blog/post2",
+        target_slug: "tag",
         type: :frontmatter
       })
       |> Ecto.Changeset.put_change(:inserted_at, later)
@@ -179,7 +179,7 @@ defmodule Vereis.Entries.StubTest do
     end
 
     test "handles single word" do
-      assert Stub.derive_title("/elixir") == "Elixir"
+      assert Stub.derive_title("elixir") == "Elixir"
     end
 
     test "handles multiple consecutive separators" do

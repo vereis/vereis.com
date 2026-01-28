@@ -6,7 +6,7 @@ defmodule Vereis.Entries.EntryTest do
   describe "changeset/2" do
     test "valid entry with all fields" do
       attrs = %{
-        slug: "/test-entry",
+        slug: "test-entry",
         title: "Test Entry",
         body: "<p>Test content</p>",
         raw_body: "Test content",
@@ -19,10 +19,10 @@ defmodule Vereis.Entries.EntryTest do
       assert changeset.valid?
     end
 
-    test "valid entry with root slug" do
+    test "valid entry with index slug" do
       attrs = %{
-        slug: "/",
-        title: "Root Entry"
+        slug: "index",
+        title: "Index Entry"
       }
 
       changeset = Entry.changeset(%Entry{}, attrs)
@@ -31,7 +31,7 @@ defmodule Vereis.Entries.EntryTest do
 
     test "requires title" do
       attrs = %{
-        slug: "/test"
+        slug: "test"
       }
 
       changeset = Entry.changeset(%Entry{}, attrs)
@@ -49,15 +49,15 @@ defmodule Vereis.Entries.EntryTest do
       assert %{slug: ["can't be blank"]} = errors_on(changeset)
     end
 
-    test "validates slug format - must start with /, no trailing /" do
+    test "validates slug format - no leading or trailing /" do
       valid_slugs = [
-        "/",
-        "/simple",
-        "/with-hyphens",
-        "/with_underscores",
-        "/path/to/entry",
-        "/complex/path-with_various/formats",
-        "/123-numbers"
+        "index",
+        "simple",
+        "with-hyphens",
+        "with_underscores",
+        "path/to/entry",
+        "complex/path-with_various/formats",
+        "123-numbers"
       ]
 
       for slug <- valid_slugs do
@@ -68,12 +68,13 @@ defmodule Vereis.Entries.EntryTest do
 
     test "rejects invalid slug formats" do
       invalid_slugs = [
-        "no-leading-slash",
-        "/UPPERCASE",
-        "/With Spaces",
-        "/special!chars",
-        "/dot.separated",
-        "/trailing-slash/"
+        "",
+        "UPPERCASE",
+        "With Spaces",
+        "special!chars",
+        "dot.separated",
+        "trailing-slash/",
+        "/leading-slash"
       ]
 
       for slug <- invalid_slugs do
@@ -86,7 +87,7 @@ defmodule Vereis.Entries.EntryTest do
 
   describe "database constraints" do
     test "unique constraint on slug" do
-      attrs = %{slug: "/test", title: "Test"}
+      attrs = %{slug: "test", title: "Test"}
 
       {:ok, _} = %Entry{} |> Entry.changeset(attrs) |> Repo.insert()
 
@@ -95,7 +96,7 @@ defmodule Vereis.Entries.EntryTest do
     end
 
     test "coerces published_at string to DateTime" do
-      attrs = %{slug: "/test", title: "Test", published_at: "2024-01-15T12:00:00Z"}
+      attrs = %{slug: "test", title: "Test", published_at: "2024-01-15T12:00:00Z"}
       changeset = Entry.changeset(%Entry{}, attrs)
 
       assert changeset.valid?
@@ -103,7 +104,7 @@ defmodule Vereis.Entries.EntryTest do
     end
 
     test "rejects invalid published_at string" do
-      attrs = %{slug: "/test", title: "Test", published_at: "not-a-date"}
+      attrs = %{slug: "test", title: "Test", published_at: "not-a-date"}
       changeset = Entry.changeset(%Entry{}, attrs)
 
       refute changeset.valid?

@@ -194,13 +194,21 @@ defmodule Vereis.Entries do
   def import_entries(root, opts \\ []) when is_binary(root) do
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
 
-    filepaths = Path.wildcard(Path.join(root, "**/*.md"))
-
-    {valid_changesets, invalid_changesets} =
-      filepaths
+    parse_results =
+      root
+      |> Path.join("**/*.md")
+      |> Path.wildcard()
       |> Task.async_stream(&Parser.parse(&1, root))
-      |> Enum.map(fn {:ok, attrs} -> Entry.changeset(%Entry{}, attrs) end)
-      |> Enum.split_with(& &1.valid?)
+      |> Enum.map(fn
+        {:ok, {:ok, attrs}} ->
+          Entry.changeset(%Entry{}, attrs)
+
+        {:ok, {:error, reason}} ->
+          {:error, reason}
+      end)
+
+    {valid_changesets, errors} =
+      Enum.split_with(parse_results, &match?(%Ecto.Changeset{valid?: true}, &1))
 
     attrs =
       Enum.map(valid_changesets, fn changeset ->
@@ -213,11 +221,17 @@ defmodule Vereis.Entries do
         |> Map.put(:updated_at, {:placeholder, :now})
       end)
 
-    if invalid_changesets != [] do
+    if errors != [] do
       sample =
-        invalid_changesets
-        |> Enum.take(3)
-        |> Enum.map(&Ecto.Changeset.traverse_errors(&1, fn {msg, _opts} -> msg end))
+        errors
+        |> Enum.take(5)
+        |> Enum.map(fn
+          %Ecto.Changeset{} = changeset ->
+            Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+
+          error ->
+            error
+        end)
 
       Logger.warning("Invalid changesets during import: #{inspect(sample)}")
     end

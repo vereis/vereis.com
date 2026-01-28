@@ -12,15 +12,15 @@ defmodule VereisWeb.GraphQL.QueriesTest do
       # Create a reference to generate a stub
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/non-existent",
+        source_slug: "blog",
+        target_slug: "non-existent",
         type: :inline
       })
       |> Repo.insert!()
 
       query = """
       {
-        stub(slug: "/non-existent") {
+        stub(slug: "non-existent") {
           id
           slug
           title
@@ -40,8 +40,8 @@ defmodule VereisWeb.GraphQL.QueriesTest do
       assert %{
                "data" => %{
                  "stub" => %{
-                   "id" => "/non-existent",
-                   "slug" => "/non-existent",
+                   "id" => "non-existent",
+                   "slug" => "non-existent",
                    "title" => "Non Existent",
                    "description" => nil,
                    "publishedAt" => nil,
@@ -55,7 +55,7 @@ defmodule VereisWeb.GraphQL.QueriesTest do
     test "returns error when stub not found", %{conn: conn} do
       query = """
       {
-        stub(slug: "/missing") {
+        stub(slug: "missing") {
           slug
         }
       }
@@ -74,11 +74,11 @@ defmodule VereisWeb.GraphQL.QueriesTest do
 
   describe "page query" do
     test "returns Entry when entry exists", %{conn: conn} do
-      insert(:entry, slug: "/test-entry", title: "Test Entry")
+      insert(:entry, slug: "test-entry", title: "Test Entry")
 
       query = """
       {
-        page(slug: "/test-entry") {
+        page(slug: "test-entry") {
           __typename
           id
           slug
@@ -101,7 +101,7 @@ defmodule VereisWeb.GraphQL.QueriesTest do
                  "page" => %{
                    "__typename" => "Entry",
                    "id" => _id,
-                   "slug" => "/test-entry",
+                   "slug" => "test-entry",
                    "title" => "Test Entry",
                    "body" => "<p>Test body content</p>",
                    "rawBody" => "Test body content"
@@ -114,15 +114,15 @@ defmodule VereisWeb.GraphQL.QueriesTest do
       # Create a reference to generate a stub
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/stub-page",
+        source_slug: "blog",
+        target_slug: "stub-page",
         type: :inline
       })
       |> Repo.insert!()
 
       query = """
       {
-        page(slug: "/stub-page") {
+        page(slug: "stub-page") {
           __typename
           id
           slug
@@ -140,8 +140,8 @@ defmodule VereisWeb.GraphQL.QueriesTest do
                "data" => %{
                  "page" => %{
                    "__typename" => "Stub",
-                   "id" => "/stub-page",
-                   "slug" => "/stub-page",
+                   "id" => "stub-page",
+                   "slug" => "stub-page",
                    "title" => "Stub Page"
                  }
                }
@@ -150,19 +150,19 @@ defmodule VereisWeb.GraphQL.QueriesTest do
 
     test "prefers Entry over Stub", %{conn: conn} do
       # Create both an entry and a stub for the same slug
-      insert(:entry, slug: "/both", title: "Actual Entry")
+      insert(:entry, slug: "both", title: "Actual Entry")
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/both",
+        source_slug: "blog",
+        target_slug: "both",
         type: :inline
       })
       |> Repo.insert!()
 
       query = """
       {
-        page(slug: "/both") {
+        page(slug: "both") {
           __typename
           title
         }
@@ -187,7 +187,7 @@ defmodule VereisWeb.GraphQL.QueriesTest do
     test "returns error when neither exists", %{conn: conn} do
       query = """
       {
-        page(slug: "/nothing") {
+        page(slug: "nothing") {
           slug
         }
       }
@@ -209,24 +209,24 @@ defmodule VereisWeb.GraphQL.QueriesTest do
       # Create references to generate stubs
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/tags/elixir",
+        source_slug: "blog",
+        target_slug: "tags/elixir",
         type: :inline
       })
       |> Repo.insert!()
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/tags/phoenix",
+        source_slug: "blog",
+        target_slug: "tags/phoenix",
         type: :inline
       })
       |> Repo.insert!()
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/about",
+        source_slug: "blog",
+        target_slug: "about",
         type: :inline
       })
       |> Repo.insert!()
@@ -257,15 +257,15 @@ defmodule VereisWeb.GraphQL.QueriesTest do
 
       assert length(stubs) == 3
       slugs = Enum.map(stubs, & &1["slug"])
-      assert "/tags/elixir" in slugs
-      assert "/tags/phoenix" in slugs
-      assert "/about" in slugs
+      assert "tags/elixir" in slugs
+      assert "tags/phoenix" in slugs
+      assert "about" in slugs
     end
 
     test "filters stubs by prefix", %{conn: conn} do
       query = """
       {
-        stubs(prefix: "/tags") {
+        stubs(prefix: "tags") {
           slug
           title
         }
@@ -284,30 +284,30 @@ defmodule VereisWeb.GraphQL.QueriesTest do
              } = json_response(conn, 200)
 
       assert length(stubs) == 2
-      assert Enum.all?(stubs, &String.starts_with?(&1["slug"], "/tags"))
+      assert Enum.all?(stubs, &String.starts_with?(&1["slug"], "tags"))
     end
   end
 
   describe "pages query" do
     setup do
       # Create entries
-      insert(:entry, slug: "/blog/post-1", title: "Post 1")
-      insert(:entry, slug: "/blog/post-2", title: "Post 2")
-      insert(:entry, slug: "/docs/guide", title: "Guide")
+      insert(:entry, slug: "blog/post-1", title: "Post 1")
+      insert(:entry, slug: "blog/post-2", title: "Post 2")
+      insert(:entry, slug: "docs/guide", title: "Guide")
 
       # Create stubs
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog/post-1",
-        target_slug: "/blog/draft",
+        source_slug: "blog/post-1",
+        target_slug: "blog/draft",
         type: :inline
       })
       |> Repo.insert!()
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/docs/guide",
-        target_slug: "/docs/api",
+        source_slug: "docs/guide",
+        target_slug: "docs/api",
         type: :inline
       })
       |> Repo.insert!()
@@ -342,17 +342,17 @@ defmodule VereisWeb.GraphQL.QueriesTest do
       entry_slugs = pages |> Enum.filter(&(&1["__typename"] == "Entry")) |> Enum.map(& &1["slug"])
       stub_slugs = pages |> Enum.filter(&(&1["__typename"] == "Stub")) |> Enum.map(& &1["slug"])
 
-      assert "/blog/post-1" in entry_slugs
-      assert "/blog/post-2" in entry_slugs
-      assert "/docs/guide" in entry_slugs
-      assert "/blog/draft" in stub_slugs
-      assert "/docs/api" in stub_slugs
+      assert "blog/post-1" in entry_slugs
+      assert "blog/post-2" in entry_slugs
+      assert "docs/guide" in entry_slugs
+      assert "blog/draft" in stub_slugs
+      assert "docs/api" in stub_slugs
     end
 
     test "filters pages by prefix", %{conn: conn} do
       query = """
       {
-        pages(prefix: "/blog") {
+        pages(prefix: "blog") {
           __typename
           slug
           title
@@ -372,7 +372,7 @@ defmodule VereisWeb.GraphQL.QueriesTest do
              } = json_response(conn, 200)
 
       assert length(pages) == 3
-      assert Enum.all?(pages, &String.starts_with?(&1["slug"], "/blog"))
+      assert Enum.all?(pages, &String.starts_with?(&1["slug"], "blog"))
 
       entry_count = Enum.count(pages, &(&1["__typename"] == "Entry"))
       stub_count = Enum.count(pages, &(&1["__typename"] == "Stub"))
@@ -405,83 +405,83 @@ defmodule VereisWeb.GraphQL.QueriesTest do
 
   describe "Entries context - prefix filter" do
     test "list_entries filters by slug prefix" do
-      insert(:entry, slug: "/blog/post-1", title: "Post 1")
-      insert(:entry, slug: "/blog/post-2", title: "Post 2")
-      insert(:entry, slug: "/docs/guide", title: "Guide")
+      insert(:entry, slug: "blog/post-1", title: "Post 1")
+      insert(:entry, slug: "blog/post-2", title: "Post 2")
+      insert(:entry, slug: "docs/guide", title: "Guide")
 
-      entries = Entries.list_entries(prefix: "/blog")
+      entries = Entries.list_entries(prefix: "blog")
 
       assert length(entries) == 2
-      assert Enum.all?(entries, &String.starts_with?(&1.slug, "/blog"))
+      assert Enum.all?(entries, &String.starts_with?(&1.slug, "blog"))
     end
 
     test "list_stubs filters by slug prefix" do
       # Create references
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/tags/elixir",
+        source_slug: "blog",
+        target_slug: "tags/elixir",
         type: :inline
       })
       |> Repo.insert!()
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/tags/phoenix",
+        source_slug: "blog",
+        target_slug: "tags/phoenix",
         type: :inline
       })
       |> Repo.insert!()
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/about",
+        source_slug: "blog",
+        target_slug: "about",
         type: :inline
       })
       |> Repo.insert!()
 
-      stubs = Entries.list_stubs(prefix: "/tags")
+      stubs = Entries.list_stubs(prefix: "tags")
 
       assert length(stubs) == 2
-      assert Enum.all?(stubs, &String.starts_with?(&1.slug, "/tags"))
+      assert Enum.all?(stubs, &String.starts_with?(&1.slug, "tags"))
     end
 
     test "list_entries_or_stubs filters by slug prefix" do
       # Create entries
-      insert(:entry, slug: "/blog/post-1", title: "Post 1")
-      insert(:entry, slug: "/docs/guide", title: "Guide")
+      insert(:entry, slug: "blog/post-1", title: "Post 1")
+      insert(:entry, slug: "docs/guide", title: "Guide")
 
       # Create stubs
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/blog",
-        target_slug: "/blog/draft",
+        source_slug: "blog",
+        target_slug: "blog/draft",
         type: :inline
       })
       |> Repo.insert!()
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/docs",
-        target_slug: "/docs/api",
+        source_slug: "docs",
+        target_slug: "docs/api",
         type: :inline
       })
       |> Repo.insert!()
 
-      pages = Entries.list_entries_or_stubs(prefix: "/blog")
+      pages = Entries.list_entries_or_stubs(prefix: "blog")
 
       assert length(pages) == 2
-      assert Enum.all?(pages, &String.starts_with?(&1.slug, "/blog"))
+      assert Enum.all?(pages, &String.starts_with?(&1.slug, "blog"))
     end
 
     test "list_entries_or_stubs returns entries and stubs" do
-      insert(:entry, slug: "/entry", title: "Entry")
+      insert(:entry, slug: "entry", title: "Entry")
 
       %Reference{}
       |> Reference.changeset(%{
-        source_slug: "/entry",
-        target_slug: "/stub",
+        source_slug: "entry",
+        target_slug: "stub",
         type: :inline
       })
       |> Repo.insert!()
