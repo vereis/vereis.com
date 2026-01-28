@@ -5,11 +5,11 @@ defmodule VereisWeb.GraphQL.PageTest do
 
   describe "Page interface" do
     test "Entry implements Page interface", %{conn: conn} do
-      insert(:entry, slug: "/test", title: "Test Entry")
+      insert(:entry, slug: "test", title: "Test Entry")
 
       query = """
       {
-        entry(slug: "/test") {
+        entry(slug: "test") {
           __typename
           id
           slug
@@ -34,7 +34,7 @@ defmodule VereisWeb.GraphQL.PageTest do
                  "entry" => %{
                    "__typename" => "Entry",
                    "id" => _id,
-                   "slug" => "/test",
+                   "slug" => "test",
                    "title" => "Test Entry",
                    "description" => "Test description",
                    "publishedAt" => nil,
@@ -46,11 +46,11 @@ defmodule VereisWeb.GraphQL.PageTest do
     end
 
     test "Entry has both Page fields and Entry-specific fields", %{conn: conn} do
-      insert(:entry, slug: "/with-body", title: "Test")
+      insert(:entry, slug: "with-body", title: "Test")
 
       query = """
       {
-        entry(slug: "/with-body") {
+        entry(slug: "with-body") {
           __typename
           id
           slug
@@ -78,7 +78,7 @@ defmodule VereisWeb.GraphQL.PageTest do
                  "entry" => %{
                    "__typename" => "Entry",
                    "id" => _id,
-                   "slug" => "/with-body",
+                   "slug" => "with-body",
                    "title" => "Test",
                    "body" => "<p>Test body content</p>",
                    "rawBody" => "Test body content",
@@ -89,12 +89,12 @@ defmodule VereisWeb.GraphQL.PageTest do
     end
 
     test "node query resolves Entry as Page interface", %{conn: conn} do
-      _entry = insert(:entry, slug: "/interface-test", title: "Interface Test")
+      _entry = insert(:entry, slug: "interface-test", title: "Interface Test")
 
       # First get the global ID
       query1 = """
       {
-        entry(slug: "/interface-test") {
+        entry(slug: "interface-test") {
           id
         }
       }
@@ -133,7 +133,7 @@ defmodule VereisWeb.GraphQL.PageTest do
                  "node" => %{
                    "__typename" => "Entry",
                    "id" => ^global_id,
-                   "slug" => "/interface-test",
+                   "slug" => "interface-test",
                    "title" => "Interface Test",
                    "description" => "Test description"
                  }

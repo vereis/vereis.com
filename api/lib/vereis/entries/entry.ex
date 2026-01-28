@@ -72,16 +72,16 @@ defmodule Vereis.Entries.Entry do
       is_nil(slug) ->
         changeset
 
-      slug == "/" ->
-        changeset
+      slug == "" ->
+        add_error(changeset, :slug, "can't be blank")
 
-      not String.starts_with?(slug, "/") ->
-        add_error(changeset, :slug, "must start with /")
+      String.starts_with?(slug, "/") ->
+        add_error(changeset, :slug, "must not start with /")
 
       String.ends_with?(slug, "/") ->
         add_error(changeset, :slug, "must not end with /")
 
-      not String.match?(slug, ~r/^\/[a-z0-9_\/-]+$/) ->
+      not String.match?(slug, ~r/^[a-z0-9_\/-]+$/) ->
         add_error(changeset, :slug, "must be lowercase alphanumeric with hyphens, underscores, or slashes")
 
       true ->

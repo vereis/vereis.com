@@ -5,11 +5,11 @@ defmodule VereisWeb.GraphQL.EntryTest do
 
   describe "entry query" do
     test "returns entry when found", %{conn: conn} do
-      _entry = insert(:entry, slug: "/test-entry", title: "Test Entry")
+      _entry = insert(:entry, slug: "test-entry", title: "Test Entry")
 
       query = """
       {
-        entry(slug: "/test-entry") {
+        entry(slug: "test-entry") {
           id
           slug
           title
@@ -32,7 +32,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
                "data" => %{
                  "entry" => %{
                    "id" => _id,
-                   "slug" => "/test-entry",
+                   "slug" => "test-entry",
                    "title" => "Test Entry",
                    "body" => "<p>Test body content</p>",
                    "rawBody" => "Test body content",
@@ -48,7 +48,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
     test "returns error when entry not found", %{conn: conn} do
       query = """
       {
-        entry(slug: "/nonexistent") {
+        entry(slug: "nonexistent") {
           id
           slug
           title
@@ -67,11 +67,11 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "filters out soft-deleted entries", %{conn: conn} do
-      _entry = insert(:entry, slug: "/deleted-entry", deleted_at: ~U[2024-01-01 00:00:00Z])
+      _entry = insert(:entry, slug: "deleted-entry", deleted_at: ~U[2024-01-01 00:00:00Z])
 
       query = """
       {
-        entry(slug: "/deleted-entry") {
+        entry(slug: "deleted-entry") {
           id
           slug
         }
@@ -90,11 +90,11 @@ defmodule VereisWeb.GraphQL.EntryTest do
 
     test "returns entry with published_at when set", %{conn: conn} do
       published_at = ~U[2024-01-15 12:00:00Z]
-      insert(:entry, slug: "/published", published_at: published_at)
+      insert(:entry, slug: "published", published_at: published_at)
 
       query = """
       {
-        entry(slug: "/published") {
+        entry(slug: "published") {
           slug
           publishedAt
         }
@@ -109,7 +109,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
       assert %{
                "data" => %{
                  "entry" => %{
-                   "slug" => "/published",
+                   "slug" => "published",
                    "publishedAt" => published_at_string
                  }
                }
@@ -125,11 +125,11 @@ defmodule VereisWeb.GraphQL.EntryTest do
         %{level: 3, title: "Installation", link: "installation"}
       ]
 
-      insert(:entry, slug: "/with-headings", title: "Test", headings: headings)
+      insert(:entry, slug: "with-headings", title: "Test", headings: headings)
 
       query = """
       {
-        entry(slug: "/with-headings") {
+        entry(slug: "with-headings") {
           slug
           headings {
             level
@@ -148,7 +148,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
       assert %{
                "data" => %{
                  "entry" => %{
-                   "slug" => "/with-headings",
+                   "slug" => "with-headings",
                    "headings" => [
                      %{"level" => 1, "title" => "Introduction", "link" => "introduction"},
                      %{"level" => 2, "title" => "Getting Started", "link" => "getting-started"},
@@ -160,11 +160,11 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "returns empty headings list when entry has no headings", %{conn: conn} do
-      insert(:entry, slug: "/no-headings", title: "No Headings")
+      insert(:entry, slug: "no-headings", title: "No Headings")
 
       query = """
       {
-        entry(slug: "/no-headings") {
+        entry(slug: "no-headings") {
           slug
           headings {
             level
@@ -183,7 +183,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
       assert %{
                "data" => %{
                  "entry" => %{
-                   "slug" => "/no-headings",
+                   "slug" => "no-headings",
                    "headings" => []
                  }
                }
@@ -230,9 +230,9 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "returns all non-deleted entries in connection format", %{conn: conn} do
-      _entry1 = insert(:entry, slug: "/entry-1", title: "Entry 1")
-      _entry2 = insert(:entry, slug: "/entry-2", title: "Entry 2")
-      _deleted = insert(:entry, slug: "/deleted", deleted_at: ~U[2024-01-01 00:00:00Z])
+      _entry1 = insert(:entry, slug: "entry-1", title: "Entry 1")
+      _entry2 = insert(:entry, slug: "entry-2", title: "Entry 2")
+      _deleted = insert(:entry, slug: "deleted", deleted_at: ~U[2024-01-01 00:00:00Z])
 
       query = """
       {
@@ -261,8 +261,8 @@ defmodule VereisWeb.GraphQL.EntryTest do
       assert %{"data" => %{"entries" => %{"edges" => edges}}} = response
       assert length(edges) == 2
       slugs = Enum.map(edges, fn %{"node" => node} -> node["slug"] end)
-      assert "/entry-1" in slugs
-      assert "/entry-2" in slugs
+      assert "entry-1" in slugs
+      assert "entry-2" in slugs
       refute "/deleted" in slugs
 
       # Verify cursors exist
@@ -270,9 +270,9 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "supports pagination with first argument", %{conn: conn} do
-      _entry1 = insert(:entry, slug: "/entry-1", title: "Entry 1")
-      _entry2 = insert(:entry, slug: "/entry-2", title: "Entry 2")
-      _entry3 = insert(:entry, slug: "/entry-3", title: "Entry 3")
+      _entry1 = insert(:entry, slug: "entry-1", title: "Entry 1")
+      _entry2 = insert(:entry, slug: "entry-2", title: "Entry 2")
+      _entry3 = insert(:entry, slug: "entry-3", title: "Entry 3")
 
       query = """
       {
@@ -303,9 +303,9 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "supports pagination with after argument", %{conn: conn} do
-      _entry1 = insert(:entry, slug: "/entry-1", title: "Entry 1")
-      _entry2 = insert(:entry, slug: "/entry-2", title: "Entry 2")
-      _entry3 = insert(:entry, slug: "/entry-3", title: "Entry 3")
+      _entry1 = insert(:entry, slug: "entry-1", title: "Entry 1")
+      _entry2 = insert(:entry, slug: "entry-2", title: "Entry 2")
+      _entry3 = insert(:entry, slug: "entry-3", title: "Entry 3")
 
       # First query to get the cursor
       first_query = """
@@ -356,8 +356,8 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "supports ordering by insertedAt desc", %{conn: conn} do
-      _entry1 = insert(:entry, slug: "/old", title: "Old", inserted_at: ~U[2024-01-01 00:00:00Z])
-      _entry2 = insert(:entry, slug: "/new", title: "New", inserted_at: ~U[2024-01-15 00:00:00Z])
+      _entry1 = insert(:entry, slug: "old", title: "Old", inserted_at: ~U[2024-01-01 00:00:00Z])
+      _entry2 = insert(:entry, slug: "new", title: "New", inserted_at: ~U[2024-01-15 00:00:00Z])
 
       query = """
       {
@@ -379,12 +379,12 @@ defmodule VereisWeb.GraphQL.EntryTest do
       response = json_response(conn, 200)
       assert %{"data" => %{"entries" => %{"edges" => edges}}} = response
       slugs = Enum.map(edges, & &1["node"]["slug"])
-      assert slugs == ["/new", "/old"]
+      assert slugs == ["new", "old"]
     end
 
     test "supports ordering by title asc", %{conn: conn} do
-      _entry1 = insert(:entry, slug: "/zebra", title: "Zebra")
-      _entry2 = insert(:entry, slug: "/apple", title: "Apple")
+      _entry1 = insert(:entry, slug: "zebra", title: "Zebra")
+      _entry2 = insert(:entry, slug: "apple", title: "Apple")
 
       query = """
       {
@@ -410,8 +410,8 @@ defmodule VereisWeb.GraphQL.EntryTest do
     end
 
     test "supports filtering by search", %{conn: conn} do
-      _entry1 = insert(:entry, slug: "/elixir", title: "Elixir Guide", raw_body: "Learn Elixir")
-      _entry2 = insert(:entry, slug: "/rust", title: "Rust Guide", raw_body: "Learn Rust")
+      _entry1 = insert(:entry, slug: "elixir", title: "Elixir Guide", raw_body: "Learn Elixir")
+      _entry2 = insert(:entry, slug: "rust", title: "Rust Guide", raw_body: "Learn Rust")
 
       query = """
       {
@@ -434,12 +434,12 @@ defmodule VereisWeb.GraphQL.EntryTest do
       response = json_response(conn, 200)
       assert %{"data" => %{"entries" => %{"edges" => edges}}} = response
       assert length(edges) == 1
-      assert hd(edges)["node"]["slug"] == "/elixir"
+      assert hd(edges)["node"]["slug"] == "elixir"
     end
 
     test "supports filtering by isPublished true", %{conn: conn} do
-      _published = insert(:entry, slug: "/published", published_at: ~U[2024-01-01 00:00:00Z])
-      _draft = insert(:entry, slug: "/draft", published_at: nil)
+      _published = insert(:entry, slug: "published", published_at: ~U[2024-01-01 00:00:00Z])
+      _draft = insert(:entry, slug: "draft", published_at: nil)
 
       query = """
       {
@@ -461,12 +461,12 @@ defmodule VereisWeb.GraphQL.EntryTest do
       response = json_response(conn, 200)
       assert %{"data" => %{"entries" => %{"edges" => edges}}} = response
       assert length(edges) == 1
-      assert hd(edges)["node"]["slug"] == "/published"
+      assert hd(edges)["node"]["slug"] == "published"
     end
 
     test "supports filtering by isPublished false", %{conn: conn} do
-      _published = insert(:entry, slug: "/published", published_at: ~U[2024-01-01 00:00:00Z])
-      _draft = insert(:entry, slug: "/draft", published_at: nil)
+      _published = insert(:entry, slug: "published", published_at: ~U[2024-01-01 00:00:00Z])
+      _draft = insert(:entry, slug: "draft", published_at: nil)
 
       query = """
       {
@@ -488,15 +488,15 @@ defmodule VereisWeb.GraphQL.EntryTest do
       response = json_response(conn, 200)
       assert %{"data" => %{"entries" => %{"edges" => edges}}} = response
       assert length(edges) == 1
-      assert hd(edges)["node"]["slug"] == "/draft"
+      assert hd(edges)["node"]["slug"] == "draft"
     end
 
     test "supports combining filters and ordering", %{conn: conn} do
-      _draft1 = insert(:entry, slug: "/draft-1", title: "Zebra Draft", published_at: nil)
-      _draft2 = insert(:entry, slug: "/draft-2", title: "Apple Draft", published_at: nil)
+      _draft1 = insert(:entry, slug: "draft-1", title: "Zebra Draft", published_at: nil)
+      _draft2 = insert(:entry, slug: "draft-2", title: "Apple Draft", published_at: nil)
 
       _published =
-        insert(:entry, slug: "/published", title: "Published", published_at: ~U[2024-01-01 00:00:00Z])
+        insert(:entry, slug: "published", title: "Published", published_at: ~U[2024-01-01 00:00:00Z])
 
       query = """
       {
@@ -525,7 +525,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
 
     test "returns all fields for entries in connection format", %{conn: conn} do
       insert(:entry,
-        slug: "/test",
+        slug: "test",
         title: "Test",
         body: "<p>Body</p>",
         raw_body: "Body",
@@ -564,7 +564,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
                      %{
                        "node" => %{
                          "id" => _id,
-                         "slug" => "/test",
+                         "slug" => "test",
                          "title" => "Test",
                          "body" => "<p>Body</p>",
                          "rawBody" => "Body",
@@ -583,12 +583,12 @@ defmodule VereisWeb.GraphQL.EntryTest do
 
   describe "node query (Relay)" do
     test "fetches entry by global ID", %{conn: conn} do
-      _entry = insert(:entry, slug: "/node-test", title: "Node Test")
+      _entry = insert(:entry, slug: "node-test", title: "Node Test")
 
       # First get the global ID
       query1 = """
       {
-        entry(slug: "/node-test") {
+        entry(slug: "node-test") {
           id
         }
       }
@@ -624,7 +624,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
                "data" => %{
                  "node" => %{
                    "id" => ^global_id,
-                   "slug" => "/node-test",
+                   "slug" => "node-test",
                    "title" => "Node Test"
                  }
                }
