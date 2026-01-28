@@ -3,6 +3,7 @@ defmodule VereisWeb.GraphQL.Resolvers.Entry do
 
   alias Vereis.Entries
   alias Vereis.Entries.Entry
+  alias Vereis.Entries.Reference
   alias VereisWeb.GraphQL.Pagination
 
   def node(%{type: :entry, id: id}, _resolution) do
