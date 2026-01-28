@@ -49,13 +49,10 @@ defmodule Vereis.Entries do
   end
 
   def list_references(%Entry{slug: slug}, filters) when is_list(filters) do
-    direction = Keyword.get(filters, :direction, :outgoing)
-    list_references(Keyword.merge(filters, slug: slug, direction: direction))
-  end
-
-  def list_references(%Stub{slug: slug}, filters) when is_list(filters) do
-    direction = Keyword.get(filters, :direction, :outgoing)
-    list_references(Keyword.merge(filters, slug: slug, direction: direction))
+    filters
+    |> Keyword.put(:slug, slug)
+    |> Keyword.put_new(:direction, :outgoing)
+    |> list_references()
   end
 
   @spec upsert_references(Entry.t(), map()) :: {:ok, [Reference.t()]} | {:error, term()}
