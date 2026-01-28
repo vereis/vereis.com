@@ -7,6 +7,8 @@ defmodule Vereis.Entries.Reference do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias Vereis.Entries.Entry
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :string
 
@@ -70,7 +72,7 @@ defmodule Vereis.Entries.Reference do
         from r in query,
           where:
             exists(
-              from e in "entries",
+              from e in Entry,
                 where: e.slug == parent_as(:self).target_slug and is_nil(e.deleted_at),
                 select: 1
             )
@@ -79,7 +81,7 @@ defmodule Vereis.Entries.Reference do
         from r in query,
           where:
             not exists(
-              from e in "entries",
+              from e in Entry,
                 where: e.slug == parent_as(:self).target_slug and is_nil(e.deleted_at),
                 select: 1
             )
