@@ -9,6 +9,7 @@ defmodule VereisWeb.GraphQL.Schema do
 
   import_types VereisWeb.GraphQL.Types.Scalars
   import_types VereisWeb.GraphQL.Types.Entry
+  import_types VereisWeb.GraphQL.Types.Stub
   import_types VereisWeb.GraphQL.Types.Version
 
   node interface do
