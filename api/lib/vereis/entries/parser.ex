@@ -43,8 +43,23 @@ defmodule Vereis.Entries.Parser do
     [_empty, yaml, body] = String.split(content, ~r/^---\n/m, parts: 3)
     frontmatter = YamlElixir.read_from_string!(yaml)
     valid_fields = :fields |> Entry.__schema__() |> Map.new(&{to_string(&1), &1})
+    attrs = Map.put(attrs, :raw_body, String.trim(body))
 
-    Enum.reduce(frontmatter, Map.put(attrs, :raw_body, String.trim(body)), fn
+    attrs =
+      case Map.get(frontmatter, "references") do
+        refs when is_list(refs) ->
+          normalized_refs =
+            refs
+            |> Enum.map(&normalize_slug/1)
+            |> Enum.reject(&(&1 == ""))
+
+          Map.put(attrs, :frontmatter_refs, normalized_refs)
+
+        _ ->
+          attrs
+      end
+
+    Enum.reduce(frontmatter, attrs, fn
       {key, value}, acc when is_map_key(valid_fields, key) ->
         Map.put(acc, valid_fields[key], value)
 

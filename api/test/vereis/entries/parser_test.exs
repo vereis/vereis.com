@@ -421,4 +421,130 @@ defmodule Vereis.Entries.ParserTest do
       assert result.inline_refs == ["/elixir", "/elixir"]
     end
   end
+
+  describe "frontmatter references extraction" do
+    test "extracts references from frontmatter" do
+      content = """
+      ---
+      title: Test
+      references:
+        - /elixir
+        - /phoenix
+      ---
+
+      Content here.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.frontmatter_refs == ["/elixir", "/phoenix"]
+    end
+
+    test "normalizes slugs without leading slash" do
+      content = """
+      ---
+      title: Test
+      references:
+        - elixir
+        - phoenix/liveview
+      ---
+
+      Content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.frontmatter_refs == ["/elixir", "/phoenix/liveview"]
+    end
+
+    test "handles references with spaces" do
+      content = """
+      ---
+      title: Test
+      references:
+        - "  /elixir  "
+        - " phoenix "
+      ---
+
+      Content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.frontmatter_refs == ["/elixir", "/phoenix"]
+    end
+
+    test "handles empty references array" do
+      content = """
+      ---
+      title: Test
+      references: []
+      ---
+
+      Content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.frontmatter_refs == []
+    end
+
+    test "skips empty references after normalization" do
+      content = """
+      ---
+      title: Test
+      references:
+        - /elixir
+        - ""
+        - "   "
+        - /phoenix
+      ---
+
+      Content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.frontmatter_refs == ["/elixir", "/phoenix"]
+    end
+
+    test "no references field returns empty list" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      refute Map.has_key?(result, :frontmatter_refs)
+    end
+
+    test "non-array references value is ignored" do
+      content = """
+      ---
+      title: Test
+      references: "not-an-array"
+      ---
+
+      Content.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      refute Map.has_key?(result, :frontmatter_refs)
+    end
+
+    test "handles mixed inline and frontmatter references" do
+      content = """
+      ---
+      title: Test
+      references:
+        - /elixir
+        - /ecto
+      ---
+
+      Check out [[/phoenix]] for more info.
+      """
+
+      result = Parser.parse("content/test.md", content, "content")
+      assert result.frontmatter_refs == ["/elixir", "/ecto"]
+      assert result.inline_refs == ["/phoenix"]
+    end
+  end
 end
