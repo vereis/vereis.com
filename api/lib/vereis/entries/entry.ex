@@ -113,6 +113,10 @@ defmodule Vereis.Entries.Entry do
             "LOWER(?)" |> fragment(e.title) |> like(^search_pattern) or
               "LOWER(?)" |> fragment(e.raw_body) |> like(^search_pattern)
 
+      {:prefix, prefix}, query when is_binary(prefix) ->
+        pattern = "#{prefix}%"
+        from e in query, where: like(e.slug, ^pattern)
+
       {key, value}, query ->
         apply_filter(query, {key, value})
     end)
