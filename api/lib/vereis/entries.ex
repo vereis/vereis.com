@@ -31,7 +31,7 @@ defmodule Vereis.Entries do
 
   @spec delete_entry(Entry.t()) :: {:ok, Entry.t()} | {:error, Ecto.Changeset.t()}
   def delete_entry(%Entry{} = entry) do
-    update_entry(entry, %{deleted_at: DateTime.utc_now()})
+    update_entry(entry, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
   end
 
   @spec import_entries(String.t()) :: {pos_integer(), nil | [Entry.t()]}
