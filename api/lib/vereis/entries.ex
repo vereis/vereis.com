@@ -37,30 +37,15 @@ defmodule Vereis.Entries do
     update_entry(entry, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
   end
 
+  @spec list_references(Entry.t() | Stub.t() | keyword()) :: [Reference.t()]
   @spec list_references(Entry.t() | Stub.t(), keyword()) :: [Reference.t()]
-  def list_references(page, filters \\ [])
 
-  def list_references(%Entry{slug: slug}, filters) do
-    list_references_by_slug(slug, filters)
+  def list_references(%struct{} = page) when struct in [Entry, Stub] do
+    list_references(page, [])
   end
 
-  def list_references(%Stub{slug: slug}, filters) do
-    list_references_by_slug(slug, filters)
-  end
-
-  defp list_references_by_slug(slug, filters) do
-    direction = Keyword.get(filters, :direction, :outgoing)
-    filters = Keyword.delete(filters, :direction)
-
-    case_result =
-      case direction do
-        :outgoing -> Keyword.put(filters, :source_slug, slug)
-        :incoming -> Keyword.put(filters, :target_slug, slug)
-      end
-
-    case_result
-    |> Reference.query()
-    |> Repo.all()
+  def list_references(filters) when is_list(filters) do
+    filters |> Reference.query() |> Repo.all()
   end
 
   def list_references(%Entry{slug: slug}, filters) when is_list(filters) do

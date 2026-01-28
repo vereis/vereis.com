@@ -67,24 +67,29 @@ defmodule Vereis.Entries.Reference do
 
   @impl Vereis.Queryable
   def query(base_query \\ base_query(), filters) do
-    Enum.reduce(filters, base_query, fn
-      {:target, :entry}, query ->
-        from r in query,
-          where:
-            exists(
-              from e in Entry,
-                where: e.slug == parent_as(:self).target_slug and is_nil(e.deleted_at),
-                select: 1
-            )
+    {slug, filters} = Keyword.pop(filters, :slug)
+    has_direction = Keyword.has_key?(filters, :direction)
 
-      {:target, :stub}, query ->
-        from r in query,
-          where:
-            not exists(
-              from e in Entry,
-                where: e.slug == parent_as(:self).target_slug and is_nil(e.deleted_at),
-                select: 1
-            )
+    cond do
+      has_direction && is_nil(slug) ->
+        raise ArgumentError, "Reference.query/2 requires :slug filter when :direction is specified"
+
+      slug && !has_direction ->
+        raise ArgumentError, "Reference.query/2 requires :direction filter when :slug is specified"
+
+      true ->
+        :ok
+    end
+
+    Enum.reduce(filters, base_query, fn
+      {:direction, :outgoing}, query ->
+        from r in query, where: r.source_slug == ^slug
+
+      {:direction, :incoming}, query ->
+        from r in query, where: r.target_slug == ^slug
+
+      {:source_slug, slugs}, query when is_list(slugs) ->
+        from r in query, where: r.source_slug in ^slugs
 
       filter, query ->
         apply_filter(query, filter)

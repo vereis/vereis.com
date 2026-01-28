@@ -87,65 +87,78 @@ defmodule Vereis.EntriesTest do
     end
   end
 
-  describe "get_entry_or_stub/1" do
-    test "returns entry when entry exists" do
-      entry = insert(:entry, slug: "elixir", title: "Elixir")
+  describe "list_references/1" do
+    test "lists all references when no filters provided" do
+      insert(:entry, slug: "foo")
+      insert(:entry, slug: "bar")
+      insert(:entry, slug: "baz")
+      insert(:entry, slug: "qux")
+      insert(:reference, source_slug: "foo", target_slug: "bar", type: :inline)
+      insert(:reference, source_slug: "baz", target_slug: "qux", type: :inline)
 
-      result = Entries.get_entry_or_stub("elixir")
-
-      assert %Entry{} = result
-      assert result.id == entry.id
-      assert result.slug == "elixir"
-      assert result.title == "Elixir"
+      refs = Entries.list_references([])
+      assert length(refs) == 2
     end
 
-    test "returns stub when entry does not exist but has references" do
-      insert(:reference, source_slug: "blog", target_slug: "non-existent", type: :inline)
+    test "filters by slug and direction" do
+      insert(:entry, slug: "foo")
+      insert(:entry, slug: "bar")
+      insert(:entry, slug: "baz")
+      insert(:reference, source_slug: "foo", target_slug: "bar", type: :inline)
+      insert(:reference, source_slug: "baz", target_slug: "foo", type: :inline)
 
-      result = Entries.get_entry_or_stub("non-existent")
-
-      assert %Stub{} = result
-      assert result.slug == "non-existent"
+      refs = Entries.list_references(slug: "foo", direction: :outgoing)
+      assert length(refs) == 1
+      assert hd(refs).source_slug == "foo"
     end
 
-    test "returns nil when neither entry nor stub exists" do
-      result = Entries.get_entry_or_stub("totally-missing")
-
-      assert is_nil(result)
-    end
-
-    test "prefers entry over stub when both could exist" do
-      entry = insert(:entry, slug: "elixir", title: "Elixir")
-      insert(:reference, source_slug: "blog", target_slug: "elixir", type: :inline)
-
-      result = Entries.get_entry_or_stub("elixir")
-
-      assert %Entry{} = result
-      assert result.id == entry.id
-    end
-
-    test "returns stub when entry is soft-deleted" do
-      entry = insert(:entry, slug: "deleted", title: "Deleted")
-      {:ok, _} = Entries.delete_entry(entry)
-
-      insert(:reference, source_slug: "blog", target_slug: "deleted", type: :inline)
-
-      result = Entries.get_entry_or_stub("deleted")
-
-      assert %Stub{} = result
-      assert result.slug == "deleted"
-    end
-
-    test "raises ArgumentError when :id filter is provided" do
-      assert_raise ArgumentError, "get_entry_or_stub/1 does not support :id filter", fn ->
-        Entries.get_entry_or_stub(id: "some-id", slug: "test")
+    test "raises ArgumentError when :direction is provided without :slug" do
+      assert_raise ArgumentError, "Reference.query/2 requires :slug filter when :direction is specified", fn ->
+        Entries.list_references(direction: :incoming)
       end
     end
 
-    test "raises ArgumentError when :slug filter is missing" do
-      assert_raise ArgumentError, "get_entry_or_stub/1 requires :slug filter", fn ->
-        Entries.get_entry_or_stub([])
+    test "raises ArgumentError when :slug is provided without :direction" do
+      assert_raise ArgumentError, "Reference.query/2 requires :direction filter when :slug is specified", fn ->
+        Entries.list_references(slug: "foo")
       end
+    end
+  end
+
+  describe "list_references/2" do
+    test "lists outgoing references for an entry" do
+      entry = insert(:entry, slug: "foo")
+      insert(:stub, slug: "bar")
+      insert(:entry, slug: "baz")
+      insert(:reference, source_slug: "foo", target_slug: "bar", type: :inline)
+      insert(:reference, source_slug: "baz", target_slug: "foo", type: :inline)
+
+      refs = Entries.list_references(entry)
+      assert length(refs) == 1
+      assert hd(refs).source_slug == "foo"
+    end
+
+    test "lists incoming references for an entry" do
+      entry = insert(:entry, slug: "foo")
+      insert(:stub, slug: "bar")
+      insert(:entry, slug: "baz")
+      insert(:reference, source_slug: "foo", target_slug: "bar", type: :inline)
+      insert(:reference, source_slug: "baz", target_slug: "foo", type: :inline)
+
+      refs = Entries.list_references(entry, direction: :incoming)
+      assert length(refs) == 1
+      assert hd(refs).target_slug == "foo"
+    end
+
+    test "works with stub entries" do
+      stub = insert(:stub, slug: "stub-page")
+      insert(:entry, slug: "blog")
+      insert(:reference, source_slug: "blog", target_slug: "stub-page", type: :inline)
+
+      refs = Entries.list_references(stub, direction: :incoming)
+
+      assert length(refs) == 1
+      assert hd(refs).target_slug == "stub-page"
     end
   end
 
