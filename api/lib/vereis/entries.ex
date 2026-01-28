@@ -1,8 +1,6 @@
 defmodule Vereis.Entries do
   @moduledoc "Context module for managing wiki/blog entries."
 
-  import Ecto.Query
-
   alias Vereis.Entries.Entry
   alias Vereis.Entries.Importer
   alias Vereis.Entries.Reference
@@ -37,11 +35,10 @@ defmodule Vereis.Entries do
     update_entry(entry, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
   end
 
-  @spec list_references(Entry.t() | Stub.t() | keyword()) :: [Reference.t()]
-  @spec list_references(Entry.t() | Stub.t(), keyword()) :: [Reference.t()]
-
-  def list_references(%struct{} = page) when struct in [Entry, Stub] do
-    list_references(page, [])
+  @spec list_references(Entry.t() | keyword()) :: [Reference.t()]
+  @spec list_references(Entry.t(), keyword()) :: [Reference.t()]
+  def list_references(%Entry{} = entry) do
+    list_references(entry, [])
   end
 
   def list_references(filters) when is_list(filters) do
@@ -55,110 +52,5 @@ defmodule Vereis.Entries do
     |> list_references()
   end
 
-  @spec upsert_references(Entry.t(), map()) :: {:ok, [Reference.t()]} | {:error, term()}
-  def upsert_references(%Entry{} = entry, attrs) when is_map(attrs) do
-    inline_refs = Map.get(attrs, :inline_refs, [])
-    frontmatter_refs = Map.get(attrs, :frontmatter_refs, [])
-
-    Repo.transaction(fn ->
-      # Delete old references
-      Repo.delete_all(from(r in Reference, where: r.source_slug == ^entry.slug))
-
-      # Build new reference attrs
-      now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
-
-      inline_attrs =
-        Enum.map(inline_refs, fn target_slug ->
-          %{
-            source_slug: entry.slug,
-            target_slug: target_slug,
-            type: :inline,
-            inserted_at: now
-          }
-        end)
-
-      frontmatter_attrs =
-        Enum.map(frontmatter_refs, fn target_slug ->
-          %{
-            source_slug: entry.slug,
-            target_slug: target_slug,
-            type: :frontmatter,
-            inserted_at: now
-          }
-        end)
-
-      all_attrs = inline_attrs ++ frontmatter_attrs
-
-      if all_attrs != [] do
-        Repo.insert_all(Reference, all_attrs,
-          on_conflict: :nothing,
-          conflict_target: [:source_slug, :target_slug, :type]
-        )
-      end
-
-      # Return the newly created references
-      Repo.all(from(r in Reference, where: r.source_slug == ^entry.slug))
-    end)
-  end
-
-  @spec import_entries(String.t()) :: {pos_integer(), nil | [Entry.t()]}
-  def import_entries(root, opts \\ []) when is_binary(root) do
-    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
-
-    parse_results =
-      root
-      |> Path.join("**/*.md")
-      |> Path.wildcard()
-      |> Task.async_stream(&Parser.parse(&1, root))
-      |> Enum.map(fn
-        {:ok, {:ok, attrs}} ->
-          Entry.changeset(%Entry{}, attrs)
-
-        {:ok, {:error, reason}} ->
-          {:error, reason}
-      end)
-
-    {valid_changesets, errors} =
-      Enum.split_with(parse_results, &match?(%Ecto.Changeset{valid?: true}, &1))
-
-    attrs =
-      Enum.map(valid_changesets, fn changeset ->
-        entry = Ecto.Changeset.apply_changes(changeset)
-
-        entry
-        |> Map.from_struct()
-        |> Map.drop([:__meta__, :type, :references, :referenced_by])
-        |> Map.put(:inserted_at, {:placeholder, :now})
-        |> Map.put(:updated_at, {:placeholder, :now})
-      end)
-
-    if errors != [] do
-      sample =
-        errors
-        |> Enum.take(5)
-        |> Enum.map(fn
-          %Ecto.Changeset{} = changeset ->
-            Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-
-          error ->
-            error
-        end)
-
-      Logger.warning("Invalid changesets during import: #{inspect(sample)}")
-    end
-
-    {count, returned} =
-      Repo.insert_all(
-        Entry,
-        attrs,
-        on_conflict: {:replace_all_except, [:id, :inserted_at]},
-        conflict_target: :slug,
-        placeholders: %{now: now},
-        returning: Keyword.get(opts, :returning, false)
-      )
-
-    Logger.info("Imported #{count} entries")
-
-    {count, returned}
-  end
+  defdelegate import_entries(root), to: Importer
 end
