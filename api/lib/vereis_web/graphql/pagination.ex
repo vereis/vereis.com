@@ -12,12 +12,12 @@ defmodule VereisWeb.GraphQL.Pagination do
     {pagination_args, args}
   end
 
-  @spec paginate(Ecto.Queryable.t(), map()) :: {:ok, map()} | {:error, String.t()}
-  def paginate(query, args \\ %{}) do
+  @spec paginate(Ecto.Queryable.t(), map(), atom()) :: {:ok, map()} | {:error, String.t()}
+  def paginate(query, args \\ %{}, unique_column \\ :id) do
     sorts =
       (args[:order_by] || [])
       |> Enum.flat_map(fn map -> Enum.map(map, fn {k, v} -> %{k => v} end) end)
-      |> Kernel.++([%{id: :asc}])
+      |> Kernel.++([%{unique_column => :asc}])
 
     args =
       args
@@ -31,7 +31,7 @@ defmodule VereisWeb.GraphQL.Pagination do
       |> Enum.map(fn {k, _v} -> k end)
 
     AbsintheRelayKeysetConnection.from_query(query, &Vereis.Repo.all/1, Map.drop(args, fields_to_drop), %{
-      unique_column: :id
+      unique_column: unique_column
     })
   end
 end

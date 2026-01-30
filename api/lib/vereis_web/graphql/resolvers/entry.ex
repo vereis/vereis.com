@@ -21,6 +21,13 @@ defmodule VereisWeb.GraphQL.Resolvers.Entry do
     end
   end
 
+  def node(%{type: :slug, id: id}, _resolution) do
+    case Entries.get_slug(slug: id) do
+      nil -> {:error, "Slug not found"}
+      slug -> {:ok, slug}
+    end
+  end
+
   def node(%{type: :service} = node, resolution) do
     Resolvers.Service.node(node, resolution)
   end

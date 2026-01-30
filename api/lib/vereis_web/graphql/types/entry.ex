@@ -23,6 +23,9 @@ defmodule VereisWeb.GraphQL.Types.Entry do
     @desc "URL slug (path)"
     field :slug, non_null(:string)
 
+    @desc "Old URL slugs that redirect to this entry"
+    field :permalinks, non_null(list_of(non_null(:string)))
+
     @desc "Entry title"
     field :title, non_null(:string)
 
