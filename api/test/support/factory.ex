@@ -69,7 +69,9 @@ defmodule Vereis.Factory do
   #       internally.
   defoverridable insert: 1, insert: 2
 
-  def insert(type) when type in [:image_asset] do
+  @asset_factories [:asset, :image_asset]
+
+  def insert(type) when type in @asset_factories do
     insert(type, [])
   end
 
@@ -77,7 +79,7 @@ defmodule Vereis.Factory do
     super(type)
   end
 
-  def insert(type, attrs) when type in [:image_asset] do
+  def insert(type, attrs) when type in @asset_factories do
     type
     |> build(attrs)
     |> Repo.insert!()

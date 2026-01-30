@@ -22,6 +22,11 @@ defmodule VereisWeb.Router do
     pipe_through :api
   end
 
+  scope "/assets", VereisWeb do
+    pipe_through :api
+    get "/*slug", AssetController, :show
+  end
+
   get "/livez", VereisWeb.ServiceController, :liveness
   get "/healthz", VereisWeb.ServiceController, :readiness
   get "/version", VereisWeb.ServiceController, :version
