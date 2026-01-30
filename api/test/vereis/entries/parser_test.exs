@@ -367,7 +367,52 @@ defmodule Vereis.Entries.ParserTest do
       assert {:ok, {entry_attrs, _ref_attrs}} = Parser.parse("content/test.md", content, "content")
       assert entry_attrs.body =~ "elixir/pipes"
       assert entry_attrs.body =~ ~s(data-wikilink="true")
-      assert entry_attrs.body =~ ~s(href="elixir/pipes")
+      assert entry_attrs.body =~ ~s(href="/elixir/pipes")
+    end
+
+    test "resolves relative wiki-links in same directory" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      Check out [[./sibling]] for more.
+      """
+
+      assert {:ok, {entry_attrs, ref_attrs}} = Parser.parse("blog/posts/entry.md", content, ".")
+      inline_refs = ref_attrs |> Enum.filter(&(&1.type == :inline)) |> Enum.map(& &1.target_slug)
+      assert inline_refs == ["blog/posts/sibling"]
+      assert entry_attrs.body =~ ~s(href="/blog/posts/sibling")
+    end
+
+    test "resolves relative wiki-links to parent directory" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      See [[../other-post]] for details.
+      """
+
+      assert {:ok, {entry_attrs, ref_attrs}} = Parser.parse("blog/posts/entry.md", content, ".")
+      inline_refs = ref_attrs |> Enum.filter(&(&1.type == :inline)) |> Enum.map(& &1.target_slug)
+      assert inline_refs == ["blog/other-post"]
+      assert entry_attrs.body =~ ~s(href="/blog/other-post")
+    end
+
+    test "resolves deeply nested relative wiki-links" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      See [[../../notes/idea]] for details.
+      """
+
+      assert {:ok, {entry_attrs, ref_attrs}} = Parser.parse("blog/posts/2024/entry.md", content, ".")
+      inline_refs = ref_attrs |> Enum.filter(&(&1.type == :inline)) |> Enum.map(& &1.target_slug)
+      assert inline_refs == ["blog/notes/idea"]
+      assert entry_attrs.body =~ ~s(href="/blog/notes/idea")
     end
 
     test "wiki-links in code blocks are not extracted" do
