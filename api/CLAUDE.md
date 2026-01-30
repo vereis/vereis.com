@@ -2,24 +2,108 @@ This is a web application written using the Phoenix web framework.
 
 ## Project guidelines
 
-- Use `mix precommit` alias when you are done with all changes and fix any pending issues
+- Use `mix test && mix lint` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 
 ### Phoenix v1.8 guidelines
 
-- **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
-- The `MyAppWeb.Layouts` module is aliased in the `my_app_web.ex` file, so you can use it without needing to alias it again
-- Anytime you run into errors with no `current_scope` assign:
-  - You failed to follow the Authenticated Routes guidelines, or you failed to pass `current_scope` to `<Layouts.app>`
-  - **Always** fix the `current_scope` error by moving your routes to the proper `live_session` and ensure you pass `current_scope` as needed
-- Phoenix v1.8 moved the `<.flash_group>` component to the `Layouts` module. You are **forbidden** from calling `<.flash_group>` outside of the `layouts.ex` module
-- Out of the box, `core_components.ex` imports an `<.icon name="hero-x-mark" class="w-5 h-5"/>` component for for hero icons. **Always** use the `<.icon>` component for icons, **never** use `Heroicons` modules or similar
-- **Always** use the imported `<.input>` component for form inputs from `core_components.ex` when available. `<.input>` is imported and using it will save steps and prevent errors
-- If you override the default input classes (`<.input class="myclass px-2 py-1 rounded-lg">)`) class with your own values, no default classes are inherited, so your
-custom classes must fully style the input
-
-
 <!-- usage-rules-start -->
+## Project guidelines
+
+<!-- project-guidelines-start -->
+- **Never** import `Ecto.Query` or manually build queries outside of contexts (dedicated modules that provide CRUD operations for a given resource). This project uses the "queryable" pattern, where schema modules (those that `use Ecto.Schema`) implement the `Vereis.Queryable` behaviour.
+
+  **Never do this (invalid)**:
+
+      import Ecto.Query
+
+      def list_users do
+        Repo.all(from u in User, where: u.active == true)
+      end
+
+  Instead, **always** use the context functions to perform queries with a schema's `query/2` function, ie:
+
+      def list_active_users do
+        Repo.all(User.query(:list, active: true))
+      end
+
+- GraphQL APIs **must** be minimal wrappers over existing context functions. **Never** implement business logic or data access directly in GraphQL resolvers.
+
+  **Never do this (invalid)**:
+
+      def resolve_create_user(args, _info) do
+        %User{}
+        |> User.changeset(args)
+        |> Repo.insert()
+      end
+
+  Instead, **always** delegate to context functions that encapsulate business logic and data access, ie:
+
+      def resolve_create_user(args, _info) do
+        Accounts.create_user(args)
+      end
+
+- GraphQL fields that load associations **must always** use either Dataloader, or a custom batch resolver to avoid N+1 query problems. **Never** load associations directly in field resolvers.
+
+  **Never do this (invalid)**:
+
+      field :posts, list_of(:post) do
+        resolve fn user, _args, _info ->
+          Repo.all(from p in Post, where: p.user_id == ^user.id)
+        end
+      end
+
+  Instead, **always** use Dataloader or a batch resolver, ie:
+
+      field :posts, list_of(:post) do
+        resolve dataloader(:db)
+      end
+
+  By default, the `:db` Dataloader source automatically delegates to a schema's `query/2` function such that you have a single source of truth for all data access patterns.
+
+  Depending on your use case (i.e. if you're returning a Relay connection), you may need to implement a custom batch resolver that uses the schema's `query/2` function directly.
+
+- GraphQL fields that load nested associations via Relay connections **must always** use a custom batch resolver to efficiently load the nested data. **Never** load nested associations directly in field resolvers.
+
+  **Never do this (invalid)**:
+
+      field :comments, list_of(:comment) do
+        resolve fn post, _args, _info ->
+          Repo.all(from c in Comment, where: c.post_id == ^post.id)
+        end
+      end
+
+  Instead, **always** implement a custom batch resolver that uses the schema's `query/2` function and `VereisWeb.GraphQL.Pagination` utilities implement real cursor-based pagination, ie:
+
+      field :comments, list_of(:comment) do
+        resolve &Resolvers.Post.comments/3
+      end
+
+      def comments(post, args, _info) do
+        {pagination_args, args} = Pagination.pop_args!(args)
+
+        args
+        |> Keyword.new()
+        |> Post.query()
+        |> Pagination.paginate(pagination_args)
+      end
+
+- **Never** wrap errors when using `with` or `case` statements. Always propagate the original error to preserve context and stack traces.
+
+  **Never do this (invalid)**:
+
+      with {:ok, user} <- Accounts.get_user(id) do
+        ...
+      else
+        {:error, _reason} -> {:error, :user_not_found}
+      end
+
+  Instead, **always** propagate the original error, ie:
+
+      with {:ok, user} <- Accounts.get_user(id) do
+        ...
+      end
+<!-- project-guidelines-end -->
 
 <!-- phoenix:elixir-start -->
 ## Elixir guidelines
