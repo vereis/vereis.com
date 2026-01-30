@@ -1,4 +1,4 @@
-defmodule VereisWeb.HealthControllerTest do
+defmodule VereisWeb.ServiceControllerTest do
   use VereisWeb.ConnCase, async: true
 
   describe "GET /livez" do
@@ -15,6 +15,16 @@ defmodule VereisWeb.HealthControllerTest do
 
       assert response["status"] == "ok"
       assert response["database"] == "connected"
+    end
+  end
+
+  describe "GET /version" do
+    test "returns version information", %{conn: conn} do
+      conn = get(conn, ~p"/version")
+      response = json_response(conn, 200)
+
+      assert is_binary(response["sha"])
+      assert is_binary(response["env"])
     end
   end
 end

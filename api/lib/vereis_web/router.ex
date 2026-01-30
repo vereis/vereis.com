@@ -22,8 +22,9 @@ defmodule VereisWeb.Router do
     pipe_through :api
   end
 
-  get "/livez", VereisWeb.HealthController, :liveness
-  get "/healthz", VereisWeb.HealthController, :readiness
+  get "/livez", VereisWeb.ServiceController, :liveness
+  get "/healthz", VereisWeb.ServiceController, :readiness
+  get "/version", VereisWeb.ServiceController, :version
 
   if Application.compile_env(:vereis, :dev_routes) do
     import Phoenix.LiveDashboard.Router

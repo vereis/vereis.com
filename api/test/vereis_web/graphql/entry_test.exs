@@ -263,7 +263,7 @@ defmodule VereisWeb.GraphQL.EntryTest do
       slugs = Enum.map(edges, fn %{"node" => node} -> node["slug"] end)
       assert "entry-1" in slugs
       assert "entry-2" in slugs
-      refute "/deleted" in slugs
+      refute "deleted" in slugs
 
       # Verify cursors exist
       assert Enum.all?(edges, fn %{"cursor" => cursor} -> is_binary(cursor) end)

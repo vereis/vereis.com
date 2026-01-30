@@ -1,23 +1,16 @@
 defmodule Vereis do
-  @moduledoc false
+  @moduledoc """
+  Root namespace module for the Vereis application.
+  Delegates to Vereis.Service for version and environment information.
+  """
+
+  alias Vereis.Service
 
   @doc "Returns the git SHA of the current version."
   @spec version() :: String.t()
-  def version do
-    release_sha = System.get_env("RELEASE_SHA")
+  defdelegate version(), to: Service
 
-    if release_sha in [nil, ""] do
-      "git"
-      |> System.cmd(["rev-parse", "HEAD"])
-      |> then(fn {sha, 0} -> String.trim(sha) end)
-    else
-      release_sha
-    end
-  end
-
-  @doc "Returns the current build environment."
-  @spec env() :: atom()
-  def env do
-    Mix.env()
-  end
+  @doc "Returns the deployment environment."
+  @spec env() :: String.t()
+  defdelegate env(), to: Service
 end

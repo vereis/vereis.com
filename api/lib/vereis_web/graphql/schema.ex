@@ -10,12 +10,13 @@ defmodule VereisWeb.GraphQL.Schema do
   import_types VereisWeb.GraphQL.Types.Scalars
   import_types VereisWeb.GraphQL.Types.Entry
   import_types VereisWeb.GraphQL.Types.Reference
-  import_types VereisWeb.GraphQL.Types.Version
+  import_types VereisWeb.GraphQL.Types.Service
 
   node interface do
     resolve_type fn
       %Vereis.Entries.Entry{}, _ -> :entry
       %Vereis.Entries.Reference{}, _ -> :reference
+      %Vereis.Service{}, _ -> :service
       _, _ -> nil
     end
   end
@@ -37,21 +38,9 @@ defmodule VereisWeb.GraphQL.Schema do
 
     import_fields :entry_queries
 
-    @desc "Is the API process running?"
-    field :liveness, non_null(:boolean) do
-      resolve(&Resolvers.Health.liveness/3)
-    end
-
-    @desc "Can the API serve traffic?"
-    field :readiness, non_null(:boolean) do
-      resolve(&Resolvers.Health.readiness/3)
-    end
-
-    @desc "API version information"
-    field :version, non_null(:version) do
-      resolve(fn _parent, _args, _resolution ->
-        {:ok, %{}}
-      end)
+    @desc "The running API service instance"
+    field :service, non_null(:service) do
+      resolve(&Resolvers.Service.get/3)
     end
   end
 end
