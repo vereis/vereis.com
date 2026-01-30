@@ -30,11 +30,11 @@ defmodule Vereis.Entries.Importer do
         #  - If an entry shares a slug with a stub, the real entry will overwrite the stub.
         entry_attrs =
           entries
-          |> build_entry_attrs(now)
-          |> Enum.concat(build_stub_attrs(refs, now))
+          |> build_entry_attrs()
+          |> Enum.concat(build_stub_attrs(refs))
           |> Enum.uniq_by(& &1.slug)
 
-        ref_attrs = build_ref_attrs(refs, now)
+        ref_attrs = build_ref_attrs(refs)
 
         {entry_count, _inserted_entries} =
           Repo.insert_all(
@@ -66,7 +66,7 @@ defmodule Vereis.Entries.Importer do
     end
   end
 
-  defp build_stub_attrs(refs, _now) do
+  defp build_stub_attrs(refs) do
     refs
     |> Enum.map(& &1.target_slug)
     |> Enum.uniq()
@@ -86,7 +86,7 @@ defmodule Vereis.Entries.Importer do
     end)
   end
 
-  defp build_entry_attrs(entries, _now) do
+  defp build_entry_attrs(entries) do
     Enum.map(entries, fn entry ->
       headings =
         entry
@@ -108,7 +108,7 @@ defmodule Vereis.Entries.Importer do
     end)
   end
 
-  defp build_ref_attrs(refs, _now) do
+  defp build_ref_attrs(refs) do
     Enum.map(refs, &Map.put(&1, :inserted_at, {:placeholder, :now}))
   end
 end
