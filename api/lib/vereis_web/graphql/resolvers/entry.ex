@@ -13,6 +13,13 @@ defmodule VereisWeb.GraphQL.Resolvers.Entry do
     end
   end
 
+  def node(%{type: :reference, id: id}, _resolution) do
+    case Entries.get_reference(id: id) do
+      nil -> {:error, "Reference not found"}
+      reference -> {:ok, reference}
+    end
+  end
+
   def node(_node, _resolution) do
     {:error, "Unknown node type"}
   end

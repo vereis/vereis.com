@@ -33,6 +33,11 @@ defmodule Vereis.Entries do
     update_entry(entry, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
   end
 
+  @spec get_reference(keyword()) :: Reference.t() | nil
+  def get_reference(filters) when is_list(filters) do
+    filters |> Reference.query() |> Repo.one()
+  end
+
   @spec list_references(Entry.t() | keyword()) :: [Reference.t()]
   @spec list_references(Entry.t(), keyword()) :: [Reference.t()]
   def list_references(%Entry{} = entry) do
