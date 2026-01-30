@@ -170,11 +170,12 @@ defmodule Vereis.Entries.Parser do
     {{tag, [{"id", link} | attrs], children}, {[heading | headings], refs}}
   end
 
-  defp process_node({"a", attrs, children}, {headings, refs}, _entry_slug) do
+  defp process_node({"a", attrs, children}, {headings, refs}, entry_slug) do
     with {"data-wikilink", "true"} <- List.keyfind(attrs, "data-wikilink", 0),
-         {"href", url} <- List.keyfind(attrs, "href", 0) do
-      slug = url |> String.trim() |> String.trim_leading("/")
-      {{"a", attrs, children}, {headings, [slug | refs]}}
+         {"href", url} <- List.keyfind(attrs, "href", 0),
+         {:ok, slug} <- Utils.path_to_slug(String.trim(url), entry_slug) do
+      updated_attrs = List.keystore(attrs, "href", 0, {"href", "/" <> slug})
+      {{"a", updated_attrs, children}, {headings, [slug | refs]}}
     else
       _ ->
         {{"a", attrs, children}, {headings, refs}}
