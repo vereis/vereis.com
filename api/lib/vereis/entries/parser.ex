@@ -17,12 +17,31 @@ defmodule Vereis.Entries.Parser do
     syntax_highlight: [formatter: {:html_inline, theme: "github_dark"}]
   ]
 
-  @spec parse(String.t(), String.t()) :: {:ok, {map(), [map()]}} | {:error, term()}
+  @typep parse_result ::
+           {:ok, {map(), [map()]}} | {:error, term()}
+
+  @glob "**/*.md"
+
+  @spec parse(String.t()) :: {:ok, [parse_result()]} | {:error, term()}
+  def parse(dir) when is_binary(dir) do
+    if File.dir?(dir) do
+      {:ok,
+       dir
+       |> Path.join(@glob)
+       |> Path.wildcard()
+       |> Task.async_stream(&parse(&1, dir), timeout: :infinity)
+       |> Enum.map(fn {:ok, result} -> result end)}
+    else
+      {:error, {:invalid_directory, "#{dir} is not a valid directory"}}
+    end
+  end
+
+  @spec parse(String.t(), String.t()) :: parse_result()
   def parse(filepath, base_dir) when is_binary(filepath) and is_binary(base_dir) do
     parse(filepath, File.read!(filepath), base_dir)
   end
 
-  @spec parse(String.t(), String.t(), String.t()) :: {:ok, {map(), [map()]}} | {:error, term()}
+  @spec parse(String.t(), String.t(), String.t()) :: parse_result()
   def parse(filepath, content, base_dir) when is_binary(filepath) and is_binary(content) and is_binary(base_dir) do
     slug = derive_slug(filepath, base_dir)
 
@@ -54,19 +73,17 @@ defmodule Vereis.Entries.Parser do
         |> Map.put(:slug, slug)
         |> Map.put(:source_hash, hash)
 
-      ref_attrs = build_ref_attrs(inline_refs, frontmatter_refs)
+      ref_attrs =
+        inline_refs
+        |> Enum.map(&%{target_slug: &1, source_slug: slug, type: :inline})
+        |> Enum.concat(Enum.map(frontmatter_refs, &%{target_slug: &1, source_slug: slug, type: :frontmatter}))
+        |> Enum.uniq_by(&{&1.target_slug, &1.type})
 
       {:ok, {entry_attrs, ref_attrs}}
     else
       {:error, reason} ->
         {:error, {:parse_error, reason, filepath}}
     end
-  end
-
-  defp build_ref_attrs(inline_refs, frontmatter_refs) do
-    inline = Enum.map(inline_refs, &%{target_slug: &1, type: :inline})
-    frontmatter = Enum.map(frontmatter_refs, &%{target_slug: &1, type: :frontmatter})
-    Enum.uniq_by(inline ++ frontmatter, &{&1.target_slug, &1.type})
   end
 
   defp parse_frontmatter(content) do

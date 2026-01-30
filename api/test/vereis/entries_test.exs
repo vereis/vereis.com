@@ -308,7 +308,7 @@ defmodule Vereis.EntriesTest do
       """)
 
       assert {:ok, result} = Entries.import_entries(content_dir)
-      assert result.entries_count == 1
+      assert result.entries_count == 3
       assert result.references_count == 2
 
       refs = Repo.all(Reference)
