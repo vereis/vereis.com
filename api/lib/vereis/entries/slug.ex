@@ -14,6 +14,7 @@ defmodule Vereis.Entries.Slug do
   @type t :: %__MODULE__{}
 
   schema "slugs" do
+    field :id, :string, virtual: true
     field :deleted_at, :utc_datetime
 
     belongs_to :entry, Entry
@@ -25,13 +26,20 @@ defmodule Vereis.Entries.Slug do
   def base_query do
     from s in __MODULE__,
       as: :self,
-      where: is_nil(s.deleted_at)
+      where: is_nil(s.deleted_at),
+      select_merge: %{id: s.slug}
   end
 
   @impl Vereis.Queryable
   def query(base_query \\ base_query(), filters) do
     {include_deleted, filters} = Keyword.pop(filters, :include_deleted)
-    base_query = (include_deleted && from(s in __MODULE__, as: :self)) || base_query
+
+    base_query =
+      if include_deleted do
+        from s in __MODULE__, as: :self, select_merge: %{id: s.slug}
+      else
+        base_query
+      end
 
     Enum.reduce(filters, base_query, fn
       {:slug, slug}, query ->

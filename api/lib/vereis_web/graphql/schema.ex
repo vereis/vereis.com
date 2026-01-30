@@ -10,12 +10,14 @@ defmodule VereisWeb.GraphQL.Schema do
   import_types VereisWeb.GraphQL.Types.Scalars
   import_types VereisWeb.GraphQL.Types.Entry
   import_types VereisWeb.GraphQL.Types.Reference
+  import_types VereisWeb.GraphQL.Types.Slug
   import_types VereisWeb.GraphQL.Types.Service
 
   node interface do
     resolve_type fn
       %Vereis.Entries.Entry{}, _ -> :entry
       %Vereis.Entries.Reference{}, _ -> :reference
+      %Vereis.Entries.Slug{}, _ -> :slug
       %Vereis.Service{}, _ -> :service
       _, _ -> nil
     end
@@ -37,6 +39,7 @@ defmodule VereisWeb.GraphQL.Schema do
     end
 
     import_fields :entry_queries
+    import_fields :slug_queries
 
     @desc "The running API service instance"
     field :service, non_null(:service) do
