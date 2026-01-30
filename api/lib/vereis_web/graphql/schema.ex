@@ -15,6 +15,7 @@ defmodule VereisWeb.GraphQL.Schema do
   node interface do
     resolve_type fn
       %Vereis.Entries.Entry{}, _ -> :entry
+      %Vereis.Entries.Reference{}, _ -> :reference
       _, _ -> nil
     end
   end
