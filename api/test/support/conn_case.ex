@@ -23,7 +23,9 @@ defmodule VereisWeb.ConnCase do
 
       import Phoenix.ConnTest
       import Plug.Conn
+      import Vereis.Factory
       import VereisWeb.ConnCase
+
       # The default endpoint for testing
       @endpoint VereisWeb.Endpoint
 
