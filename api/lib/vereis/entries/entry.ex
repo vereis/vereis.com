@@ -89,21 +89,6 @@ defmodule Vereis.Entries.Entry do
     end
   end
 
-  @doc "Derives a human-readable title from a slug (for stub entries)."
-  @spec derive_title(String.t()) :: String.t()
-  def derive_title(slug) when is_binary(slug) do
-    slug
-    |> String.split("/")
-    |> Enum.map_join(" / ", &title_case_segment/1)
-  end
-
-  defp title_case_segment(segment) do
-    segment
-    |> String.replace(~r/[-_]/, " ")
-    |> String.split(" ")
-    |> Enum.map_join(" ", &String.capitalize/1)
-  end
-
   @impl Vereis.Queryable
   def base_query do
     from e in __MODULE__,
