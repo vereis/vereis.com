@@ -38,10 +38,6 @@ defmodule Vereis.Queryable do
   Default filter implementations that can be used in schema `query/2` callbacks.
   """
   @spec apply_filter(Ecto.Queryable.t(), {field :: atom(), value :: term()}) :: Ecto.Queryable.t()
-  def apply_filter(query, {:union, union_query}) do
-    from(x in query, union_all: ^union_query)
-  end
-
   def apply_filter(query, {:select, value}) when is_atom(value) do
     from(x in query, select: field(x, ^value))
   end

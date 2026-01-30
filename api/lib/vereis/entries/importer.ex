@@ -5,6 +5,7 @@ defmodule Vereis.Entries.Importer do
   alias Vereis.Entries.Heading
   alias Vereis.Entries.Parser
   alias Vereis.Entries.Reference
+  alias Vereis.Entries.Utils
   alias Vereis.Repo
 
   require Logger
@@ -72,7 +73,7 @@ defmodule Vereis.Entries.Importer do
     |> Enum.map(fn slug ->
       %{
         slug: slug,
-        title: Entry.derive_title(slug),
+        title: Utils.slug_to_title(slug),
         type: :stub,
         body: nil,
         raw_body: nil,
