@@ -6,8 +6,6 @@ defmodule Vereis.Entries do
   alias Vereis.Entries.Reference
   alias Vereis.Repo
 
-  require Logger
-
   @spec get_entry(keyword()) :: Entry.t() | nil
   def get_entry(filters) when is_list(filters) do
     filters |> Entry.query() |> Repo.one()

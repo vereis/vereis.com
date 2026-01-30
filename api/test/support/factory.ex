@@ -8,8 +8,9 @@ defmodule Vereis.Factory do
 
   def entry_factory do
     %Entry{
-      slug: sequence(:slug, &"/entry-#{&1}"),
+      slug: sequence(:slug, &"entry-#{&1}"),
       title: sequence(:title, &"Entry #{&1}"),
+      type: :entry,
       body: "<p>Test body content</p>",
       raw_body: "Test body content",
       description: "Test description"

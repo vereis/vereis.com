@@ -59,9 +59,10 @@ defmodule VereisWeb.GraphQL.Schema do
 
     @desc "List all entries with cursor-based pagination"
     connection field :entries, node_type: :entry do
-      arg(:order_by, list_of(:entry_order_by), description: "Sort entries by multiple fields")
-      arg(:search, :string, description: "Search entries by title or content")
-      arg(:is_published, :boolean, description: "Filter by published status (has published_at set)")
+      arg :order_by, list_of(:entry_order_by), description: "Sort entries by multiple fields"
+      arg :search, :string, description: "Search entries by title or content"
+      arg :is_published, :boolean, description: "Filter by published status"
+      arg :type, :entry_type, description: "Filter by entry type (entry or stub)"
 
       resolve(&Resolvers.Entry.entries/2)
     end
