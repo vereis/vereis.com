@@ -1,6 +1,7 @@
 defmodule Vereis.Entries.ParserTest do
-  use ExUnit.Case, async: true
+  use Vereis.DataCase, async: false
 
+  alias Vereis.Assets.Metadata.Image
   alias Vereis.Entries.Parser
 
   describe "parse/2" do
@@ -585,6 +586,167 @@ defmodule Vereis.Entries.ParserTest do
       inline_refs = ref_attrs |> Enum.filter(&(&1.type == :inline)) |> Enum.map(& &1.target_slug)
       assert fm_refs == ["elixir", "ecto"]
       assert inline_refs == ["phoenix"]
+    end
+  end
+
+  describe "image processing" do
+    test "rewrites relative image src to asset path" do
+      insert(:image_asset,
+        slug: "blog/photo.webp",
+        metadata: %Image{width: 800, height: 600, lqip_hash: 42}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](./photo.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(src="/assets/blog/photo.webp")
+    end
+
+    test "injects LQIP hash as CSS variable" do
+      insert(:image_asset,
+        slug: "blog/photo.webp",
+        metadata: %Image{width: 800, height: 600, lqip_hash: 42}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](./photo.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(style="--lqip:42")
+    end
+
+    test "injects width and height" do
+      insert(:image_asset,
+        slug: "blog/photo.webp",
+        metadata: %Image{width: 800, height: 600, lqip_hash: 42}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](./photo.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(width="800")
+      assert attrs.body =~ ~s(height="600")
+    end
+
+    test "wraps image in link to full size" do
+      insert(:image_asset,
+        slug: "blog/photo.webp",
+        metadata: %Image{width: 800, height: 600, lqip_hash: 42}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](./photo.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(<a href="/assets/blog/photo.webp")
+      assert attrs.body =~ ~s(target="_blank")
+      assert attrs.body =~ ~s(rel="noopener")
+    end
+
+    test "skips external URLs" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](https://example.com/photo.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(src="https://example.com/photo.png")
+      refute attrs.body =~ ~s(--lqip)
+    end
+
+    test "leaves image unchanged if asset not found" do
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](./nonexistent.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(src="./nonexistent.png")
+      refute attrs.body =~ ~s(--lqip)
+    end
+
+    test "handles absolute paths from content root" do
+      insert(:image_asset,
+        slug: "images/hero.webp",
+        metadata: %Image{width: 1920, height: 1080, lqip_hash: 123}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![hero](/images/hero.png)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(src="/assets/images/hero.webp")
+      assert attrs.body =~ ~s(style="--lqip:123")
+    end
+
+    test "handles nested relative paths" do
+      insert(:image_asset,
+        slug: "assets/photo.webp",
+        metadata: %Image{width: 400, height: 300, lqip_hash: 99}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![photo](../assets/photo.jpg)
+      """
+
+      # Entry at posts/entry.md, image at ../assets/photo.jpg resolves to assets/photo.jpg
+      assert {:ok, {attrs, _refs}} = Parser.parse("posts/entry.md", content, ".")
+      assert attrs.body =~ ~s(src="/assets/assets/photo.webp")
+    end
+
+    test "handles webp images without conversion" do
+      insert(:image_asset,
+        slug: "blog/photo.webp",
+        metadata: %Image{width: 800, height: 600, lqip_hash: 42}
+      )
+
+      content = """
+      ---
+      title: Test
+      ---
+
+      ![alt](./photo.webp)
+      """
+
+      assert {:ok, {attrs, _refs}} = Parser.parse("blog/entry.md", content, ".")
+      assert attrs.body =~ ~s(src="/assets/blog/photo.webp")
     end
   end
 end
