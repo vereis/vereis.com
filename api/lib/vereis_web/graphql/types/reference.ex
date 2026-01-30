@@ -1,5 +1,5 @@
 defmodule VereisWeb.GraphQL.Types.Reference do
-  @moduledoc "Reference (wiki-link) GraphQL type."
+  @moduledoc "Reference GraphQL type."
 
   use Absinthe.Schema.Notation
   use Absinthe.Relay.Schema.Notation, :modern
@@ -8,19 +8,19 @@ defmodule VereisWeb.GraphQL.Types.Reference do
 
   @desc "Type of reference"
   enum :reference_type do
-    value :inline, description: "Inline wiki-link in markdown body"
-    value :frontmatter, description: "Reference in frontmatter metadata"
+    value :inline, description: "Referenced by entry body"
+    value :frontmatter, description: "Referenced by entry metadata"
   end
 
-  @desc "A wiki-link reference from one entry to another"
-  object :reference do
+  @desc "A reference from one entry to another"
+  node object(:reference) do
     @desc "Source entry slug"
     field :source_slug, non_null(:string)
 
     @desc "Target entry slug"
     field :target_slug, non_null(:string)
 
-    @desc "Type of reference (inline or frontmatter)"
+    @desc "Type of reference"
     field :type, non_null(:reference_type)
 
     @desc "When the reference was created"
@@ -33,6 +33,6 @@ defmodule VereisWeb.GraphQL.Types.Reference do
     field :target, non_null(:entry), resolve: dataloader(:db)
   end
 
-  @desc "Relay connection for paginated references"
+  @desc "Paginated references"
   connection(node_type: :reference)
 end

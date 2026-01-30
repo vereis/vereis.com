@@ -1,5 +1,5 @@
 defmodule Vereis.Entries.Reference do
-  @moduledoc "Schema for wiki-link references between entries."
+  @moduledoc "Schema for references between entries."
 
   use Ecto.Schema
   use Vereis.Queryable
