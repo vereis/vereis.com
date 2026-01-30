@@ -8,6 +8,7 @@ defmodule Vereis.Entries.Entry do
 
   alias Vereis.Entries.Heading
   alias Vereis.Entries.Reference
+  alias Vereis.Entries.Utils
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -47,7 +48,7 @@ defmodule Vereis.Entries.Entry do
     |> coerce_published_at()
     |> cast_embed(:headings, with: &Heading.changeset/2)
     |> validate_required([:slug, :title])
-    |> validate_slug()
+    |> Utils.validate_slug(:slug)
     |> unique_constraint(:slug)
   end
 
@@ -63,30 +64,6 @@ defmodule Vereis.Entries.Entry do
 
   defp coerce_published_at(changeset) do
     changeset
-  end
-
-  defp validate_slug(changeset) do
-    slug = get_field(changeset, :slug)
-
-    cond do
-      is_nil(slug) ->
-        changeset
-
-      slug == "" ->
-        add_error(changeset, :slug, "can't be blank")
-
-      String.starts_with?(slug, "/") ->
-        add_error(changeset, :slug, "must not start with /")
-
-      String.ends_with?(slug, "/") ->
-        add_error(changeset, :slug, "must not end with /")
-
-      not String.match?(slug, ~r/^[a-z0-9_\/-]+$/) ->
-        add_error(changeset, :slug, "must be lowercase alphanumeric with hyphens, underscores, or slashes")
-
-      true ->
-        changeset
-    end
   end
 
   @impl Vereis.Queryable
