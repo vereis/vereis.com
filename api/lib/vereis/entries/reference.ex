@@ -8,6 +8,7 @@ defmodule Vereis.Entries.Reference do
   import Ecto.Query
 
   alias Vereis.Entries.Entry
+  alias Vereis.Entries.Utils
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :string
@@ -29,35 +30,11 @@ defmodule Vereis.Entries.Reference do
     reference
     |> cast(attrs, [:source_slug, :target_slug, :type])
     |> validate_required([:source_slug, :target_slug, :type])
-    |> validate_slug(:source_slug)
-    |> validate_slug(:target_slug)
+    |> Utils.validate_slug(:source_slug)
+    |> Utils.validate_slug(:target_slug)
     |> unique_constraint([:source_slug, :target_slug, :type])
     |> assoc_constraint(:source)
     |> assoc_constraint(:target)
-  end
-
-  defp validate_slug(changeset, field) do
-    slug = get_field(changeset, field)
-
-    cond do
-      is_nil(slug) ->
-        changeset
-
-      slug == "" ->
-        add_error(changeset, field, "can't be blank")
-
-      String.starts_with?(slug, "/") ->
-        add_error(changeset, field, "must not start with /")
-
-      String.ends_with?(slug, "/") ->
-        add_error(changeset, field, "must not end with /")
-
-      not String.match?(slug, ~r/^[a-z0-9_\/-]+$/) ->
-        add_error(changeset, field, "must be lowercase alphanumeric with hyphens, underscores, or slashes")
-
-      true ->
-        changeset
-    end
   end
 
   @impl Vereis.Queryable
