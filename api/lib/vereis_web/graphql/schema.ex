@@ -35,6 +35,8 @@ defmodule VereisWeb.GraphQL.Schema do
       resolve(&Resolvers.Entry.node/2)
     end
 
+    import_fields :entry_queries
+
     @desc "Is the API process running?"
     field :liveness, non_null(:boolean) do
       resolve(&Resolvers.Health.liveness/3)
@@ -50,22 +52,6 @@ defmodule VereisWeb.GraphQL.Schema do
       resolve(fn _parent, _args, _resolution ->
         {:ok, %{}}
       end)
-    end
-
-    @desc "Fetch a single entry by slug"
-    field :entry, :entry do
-      arg :slug, non_null(:string)
-      resolve(&Resolvers.Entry.entry/3)
-    end
-
-    @desc "List all entries with cursor-based pagination"
-    connection field :entries, node_type: :entry do
-      arg :order_by, list_of(:entry_order_by), description: "Sort entries by multiple fields"
-      arg :search, :string, description: "Search entries by title or content"
-      arg :is_published, :boolean, description: "Filter by published status"
-      arg :type, :entry_type, description: "Filter by entry type (entry or stub)"
-
-      resolve(&Resolvers.Entry.entries/2)
     end
   end
 end

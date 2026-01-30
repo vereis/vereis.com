@@ -99,4 +99,22 @@ defmodule VereisWeb.GraphQL.Types.Entry do
     field :target_slug, :order_direction
     field :type, :order_direction
   end
+
+  object :entry_queries do
+    @desc "Fetch a single entry by slug"
+    field :entry, :entry do
+      arg :slug, non_null(:string)
+      resolve &EntryResolver.entry/3
+    end
+
+    @desc "List all entries with cursor-based pagination"
+    connection field :entries, node_type: :entry do
+      arg :order_by, list_of(:entry_order_by), description: "Sort entries by multiple fields"
+      arg :search, :string, description: "Search entries by title or content"
+      arg :is_published, :boolean, description: "Filter by published status"
+      arg :type, :entry_type, description: "Filter by entry type (entry or stub)"
+
+      resolve &EntryResolver.entries/2
+    end
+  end
 end
