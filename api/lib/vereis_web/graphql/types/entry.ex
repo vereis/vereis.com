@@ -41,10 +41,10 @@ defmodule VereisWeb.GraphQL.Types.Entry do
     @desc "When the entry was last updated"
     field :updated_at, non_null(:datetime)
 
-    @desc "Rendered HTML body (null for stubs)"
+    @desc "Rendered HTML body"
     field :body, :string
 
-    @desc "Original markdown body (null for stubs)"
+    @desc "Original markdown body"
     field :raw_body, :string
 
     @desc "Table of contents headings"
@@ -67,13 +67,13 @@ defmodule VereisWeb.GraphQL.Types.Entry do
     end
   end
 
-  @desc "Relay connection for paginated entries"
+  @desc "Paginated entries"
   connection(node_type: :entry)
 
   @desc "Entry type discriminator"
   enum :entry_type do
     value :entry, description: "Full entry with content"
-    value :stub, description: "Stub entry (referenced but not created)"
+    value :stub, description: "Stub entry placeholder"
   end
 
   @desc "Sort direction"
