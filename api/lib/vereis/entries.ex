@@ -4,6 +4,7 @@ defmodule Vereis.Entries do
   alias Vereis.Entries.Entry
   alias Vereis.Entries.Importer
   alias Vereis.Entries.Reference
+  alias Vereis.Entries.Slug
   alias Vereis.Repo
 
   @spec get_entry(keyword()) :: Entry.t() | nil
@@ -53,6 +54,16 @@ defmodule Vereis.Entries do
     |> Keyword.put(:slug, slug)
     |> Keyword.put_new(:direction, :outgoing)
     |> list_references()
+  end
+
+  @spec get_slug(keyword()) :: Slug.t() | nil
+  def get_slug(filters) when is_list(filters) do
+    filters |> Slug.query() |> Repo.one()
+  end
+
+  @spec list_slugs(keyword()) :: [Slug.t()]
+  def list_slugs(filters \\ []) when is_list(filters) do
+    filters |> Slug.query() |> Repo.all()
   end
 
   defdelegate import_entries(root), to: Importer

@@ -17,6 +17,7 @@ defmodule Vereis.Entries.Entry do
 
   schema "entries" do
     field :slug, :string
+    field :permalinks, {:array, :string}, default: []
     field :title, :string
     field :body, :string
     field :raw_body, :string
@@ -102,6 +103,9 @@ defmodule Vereis.Entries.Entry do
       {:prefix, prefix}, query when is_binary(prefix) ->
         pattern = "#{prefix}%"
         from e in query, where: like(e.slug, ^pattern)
+
+      {:slug, slug}, query when is_binary(slug) ->
+        from e in query, where: e.slug == ^slug or ^slug in e.permalinks
 
       {key, value}, query ->
         apply_filter(query, {key, value})

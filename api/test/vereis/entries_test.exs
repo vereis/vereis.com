@@ -4,6 +4,7 @@ defmodule Vereis.EntriesTest do
   alias Vereis.Entries
   alias Vereis.Entries.Entry
   alias Vereis.Entries.Reference
+  alias Vereis.Entries.Slug
   alias Vereis.Repo
 
   describe "get_entry/1" do
@@ -15,6 +16,32 @@ defmodule Vereis.EntriesTest do
 
     test "returns nil when entry not found" do
       assert is_nil(Entries.get_entry(slug: "nonexistent"))
+    end
+
+    test "returns entry by permalink" do
+      {:ok, tmp_dir} = Briefly.create(directory: true)
+      content_dir = Path.join(tmp_dir, "content")
+      file = Path.join(content_dir, "current-post.md")
+      File.mkdir_p!(content_dir)
+
+      File.write!(file, """
+      ---
+      title: Current Post
+      permalinks:
+        - old-slug
+      ---
+
+      Content
+      """)
+
+      assert {:ok, _result} = Entries.import_entries(content_dir)
+
+      entry = Entries.get_entry(slug: "current-post")
+      assert entry.title == "Current Post"
+
+      same_entry = Entries.get_entry(slug: "old-slug")
+      assert same_entry.id == entry.id
+      assert same_entry.slug == "current-post"
     end
   end
 
@@ -84,6 +111,37 @@ defmodule Vereis.EntriesTest do
 
       assert is_nil(Entries.get_entry(slug: "test"))
       assert %Entry{} = Entries.get_entry(slug: "test", include_deleted: true)
+    end
+
+    test "syncs deleted_at to slugs table" do
+      {:ok, tmp_dir} = Briefly.create(directory: true)
+      content_dir = Path.join(tmp_dir, "content")
+      file = Path.join(content_dir, "post.md")
+      File.mkdir_p!(content_dir)
+
+      File.write!(file, """
+      ---
+      title: My Post
+      permalinks:
+        - old-slug
+      ---
+
+      Content
+      """)
+
+      assert {:ok, _result} = Entries.import_entries(content_dir)
+      entry = Entries.get_entry(slug: "post")
+
+      slugs = Entries.list_slugs(entry_id: entry.id)
+      assert length(slugs) == 2
+      assert Enum.all?(slugs, &is_nil(&1.deleted_at))
+
+      {:ok, deleted_entry} = Entries.delete_entry(entry)
+      assert deleted_entry.deleted_at
+
+      deleted_slugs = Entries.list_slugs(entry_id: entry.id, include_deleted: true)
+      assert length(deleted_slugs) == 2
+      assert Enum.all?(deleted_slugs, &(&1.deleted_at != nil))
     end
   end
 
@@ -376,6 +434,159 @@ defmodule Vereis.EntriesTest do
 
       refs = Repo.all(Reference)
       assert refs == []
+    end
+
+    test "imports entries with permalinks and creates slug entries" do
+      {:ok, tmp_dir} = Briefly.create(directory: true)
+      content_dir = Path.join(tmp_dir, "content")
+      file = Path.join(content_dir, "post.md")
+      File.mkdir_p!(content_dir)
+
+      File.write!(file, """
+      ---
+      title: My Post
+      permalinks:
+        - old-slug-1
+        - old-slug-2
+      ---
+
+      Content here
+      """)
+
+      assert {:ok, result} = Entries.import_entries(content_dir)
+      assert result.entries_count == 1
+
+      entry = Entries.get_entry(slug: "post")
+      assert entry.permalinks == ["old-slug-1", "old-slug-2"]
+
+      slugs = Entries.list_slugs(entry_id: entry.id)
+      assert length(slugs) == 3
+
+      slug_values = slugs |> Enum.map(& &1.slug) |> Enum.sort()
+      assert slug_values == ["old-slug-1", "old-slug-2", "post"]
+    end
+
+    test "re-importing with different permalinks updates slug entries" do
+      {:ok, tmp_dir} = Briefly.create(directory: true)
+      content_dir = Path.join(tmp_dir, "content")
+      file = Path.join(content_dir, "post.md")
+      File.mkdir_p!(content_dir)
+
+      File.write!(file, """
+      ---
+      title: My Post
+      permalinks:
+        - old-1
+      ---
+
+      Content
+      """)
+
+      assert {:ok, _result} = Entries.import_entries(content_dir)
+      entry = Entries.get_entry(slug: "post")
+      assert length(Entries.list_slugs(entry_id: entry.id)) == 2
+
+      File.write!(file, """
+      ---
+      title: My Post
+      permalinks:
+        - old-2
+        - old-3
+      ---
+
+      Updated content
+      """)
+
+      assert {:ok, _result} = Entries.import_entries(content_dir)
+      entry = Entries.get_entry(slug: "post")
+
+      slugs = Entries.list_slugs(entry_id: entry.id)
+      assert length(slugs) == 3
+
+      slug_values = slugs |> Enum.map(& &1.slug) |> Enum.sort()
+      assert slug_values == ["old-2", "old-3", "post"]
+    end
+
+    test "fails when permalink conflicts with existing slug" do
+      {:ok, tmp_dir} = Briefly.create(directory: true)
+      content_dir = Path.join(tmp_dir, "content")
+      File.mkdir_p!(content_dir)
+
+      File.write!(Path.join(content_dir, "post1.md"), """
+      ---
+      title: Post 1
+      ---
+
+      Content 1
+      """)
+
+      assert {:ok, _result} = Entries.import_entries(content_dir)
+
+      File.write!(Path.join(content_dir, "post2.md"), """
+      ---
+      title: Post 2
+      permalinks:
+        - post1
+      ---
+
+      Content 2
+      """)
+
+      assert_raise Exqlite.Error, ~r/UNIQUE constraint failed: slugs\.slug/, fn ->
+        Entries.import_entries(content_dir)
+      end
+    end
+  end
+
+  describe "get_slug/1" do
+    test "returns slug by filter" do
+      entry = insert(:entry, slug: "test-post")
+
+      assert %Slug{} = Entries.get_slug(slug: "test-post")
+      assert Entries.get_slug(slug: "test-post").entry_id == entry.id
+    end
+
+    test "returns nil when slug not found" do
+      assert is_nil(Entries.get_slug(slug: "nonexistent"))
+    end
+
+    test "excludes deleted slugs by default" do
+      _entry = insert(:entry, slug: "test-post", deleted_at: DateTime.utc_now())
+
+      assert is_nil(Entries.get_slug(slug: "test-post"))
+      assert %Slug{} = Entries.get_slug(slug: "test-post", include_deleted: true)
+    end
+  end
+
+  describe "list_slugs/0" do
+    test "returns all non-deleted slugs" do
+      insert(:entry, slug: "post1")
+      insert(:entry, slug: "post2")
+      insert(:entry, slug: "deleted", deleted_at: DateTime.utc_now())
+
+      slugs = Entries.list_slugs()
+      assert length(slugs) == 2
+      assert slugs |> Enum.map(& &1.slug) |> Enum.sort() == ["post1", "post2"]
+    end
+  end
+
+  describe "list_slugs/1" do
+    test "includes deleted slugs when specified" do
+      insert(:entry, slug: "post1")
+      insert(:entry, slug: "deleted", deleted_at: DateTime.utc_now())
+
+      slugs = Entries.list_slugs(include_deleted: true)
+      assert length(slugs) == 2
+      assert slugs |> Enum.map(& &1.slug) |> Enum.sort() == ["deleted", "post1"]
+    end
+
+    test "filters by entry_id" do
+      entry1 = insert(:entry, slug: "post1")
+      insert(:entry, slug: "post2")
+
+      slugs = Entries.list_slugs(entry_id: entry1.id)
+      assert length(slugs) == 1
+      assert hd(slugs).slug == "post1"
     end
   end
 end

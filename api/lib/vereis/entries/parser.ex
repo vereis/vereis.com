@@ -104,6 +104,16 @@ defmodule Vereis.Entries.Parser do
 
             {acc, normalized_refs}
 
+          {"permalinks", permalinks}, {acc, refs} when is_list(permalinks) ->
+            normalized_perms =
+              permalinks
+              |> Enum.filter(&is_binary/1)
+              |> Enum.map(fn perm -> perm |> String.trim() |> String.trim_leading("/") end)
+              |> Enum.reject(&(&1 == ""))
+              |> Enum.uniq()
+
+            {Map.put(acc, :permalinks, normalized_perms), refs}
+
           {key, value}, {acc, refs} when is_map_key(valid_fields, key) ->
             {Map.put(acc, valid_fields[key], value), refs}
 
