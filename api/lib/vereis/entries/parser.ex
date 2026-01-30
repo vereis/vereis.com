@@ -2,7 +2,10 @@ defmodule Vereis.Entries.Parser do
   @moduledoc "Parses markdown files with YAML frontmatter into Entry attributes."
 
   alias Floki.HTMLParser.Html5ever
+  alias Vereis.Assets
+  alias Vereis.Assets.Metadata.Image
   alias Vereis.Entries.Entry
+  alias Vereis.Entries.Utils
 
   @markdown_opts [
     extension: [
@@ -67,7 +70,7 @@ defmodule Vereis.Entries.Parser do
 
   defp do_parse(filepath, content, slug) do
     with {:ok, {attrs, frontmatter_refs}} <- parse_frontmatter(content),
-         {:ok, {attrs, inline_refs}} <- render_markdown(attrs) do
+         {:ok, {attrs, inline_refs}} <- render_markdown(attrs, slug) do
       hash = :sha256 |> :crypto.hash(content) |> Base.encode16(case: :lower)
 
       entry_attrs =
@@ -131,9 +134,9 @@ defmodule Vereis.Entries.Parser do
     end
   end
 
-  defp render_markdown(attrs) when is_map_key(attrs, :raw_body) do
+  defp render_markdown(attrs, slug) when is_map_key(attrs, :raw_body) do
     with {:ok, html} <- MDEx.to_html(attrs.raw_body, @markdown_opts),
-         {:ok, {processed_html, headings, inline_refs}} <- postprocess_html(html) do
+         {:ok, {processed_html, headings, inline_refs}} <- postprocess_html(html, slug) do
       result =
         attrs
         |> Map.put(:body, processed_html)
@@ -143,31 +146,31 @@ defmodule Vereis.Entries.Parser do
     end
   end
 
-  defp render_markdown(_attrs) do
+  defp render_markdown(_attrs, _slug) do
     {:error, :missing_raw_body}
   end
 
-  defp postprocess_html(html) do
+  defp postprocess_html(html, slug) do
     with {:ok, ast} <- Floki.parse_document(html, html_parser: Html5ever) do
       {modified_html, {headings, inline_refs}} =
-        Floki.traverse_and_update(ast, {[], []}, &process_node/2)
+        Floki.traverse_and_update(ast, {[], []}, &process_node(&1, &2, slug))
 
       {:ok, {Floki.raw_html(modified_html), Enum.reverse(headings), Enum.reverse(inline_refs)}}
     end
   end
 
-  defp process_node({"h" <> level_str = tag, attrs, children}, {headings, refs})
+  defp process_node({"h" <> level_str = tag, attrs, children}, {headings, refs}, _entry_slug)
        when level_str in ["1", "2", "3", "4", "5", "6"] do
     level = String.to_integer(level_str)
     title = Floki.text({tag, attrs, children})
-    link = slugify(title)
+    link = Utils.slugify(title)
 
     heading = %{level: level, title: title, link: link}
 
     {{tag, [{"id", link} | attrs], children}, {[heading | headings], refs}}
   end
 
-  defp process_node({"a", attrs, children}, {headings, refs}) do
+  defp process_node({"a", attrs, children}, {headings, refs}, _entry_slug) do
     with {"data-wikilink", "true"} <- List.keyfind(attrs, "data-wikilink", 0),
          {"href", url} <- List.keyfind(attrs, "href", 0) do
       slug = url |> String.trim() |> String.trim_leading("/")
@@ -178,16 +181,42 @@ defmodule Vereis.Entries.Parser do
     end
   end
 
-  defp process_node(other, acc) do
+  defp process_node({"img", attrs, children}, {headings, refs}, entry_slug) do
+    case List.keyfind(attrs, "src", 0) do
+      {"src", src} ->
+        process_image(src, attrs, children, {headings, refs}, entry_slug)
+
+      nil ->
+        {{"img", attrs, children}, {headings, refs}}
+    end
+  end
+
+  defp process_node(other, acc, _entry_slug) do
     {other, acc}
   end
 
-  defp slugify(text) do
-    text
-    |> String.normalize(:nfd)
-    |> String.replace(~r/[^A-Za-z0-9\s-]/u, "")
-    |> String.downcase()
-    |> String.replace(~r/\s+/, "-")
-    |> String.trim("-")
+  @image_exts [".png", ".jpg", ".jpeg", ".gif"]
+
+  defp process_image(src, attrs, children, acc, entry_slug) do
+    with {:ok, path} <- Utils.path_to_slug(src, entry_slug),
+         slug = Utils.swap_ext(path, ".webp", @image_exts),
+         %{metadata: %Image{} = meta} = asset <- Assets.get_asset(slug: slug) do
+      updated_attrs =
+        attrs
+        |> List.keystore("src", 0, {"src", "/assets/#{asset.slug}"})
+        |> List.keystore("style", 0, {"style", "--lqip:#{meta.lqip_hash}"})
+        |> List.keystore("width", 0, {"width", to_string(meta.width)})
+        |> List.keystore("height", 0, {"height", to_string(meta.height)})
+
+      link_attrs = [
+        {"href", "/assets/#{asset.slug}"},
+        {"target", "_blank"},
+        {"rel", "noopener"}
+      ]
+
+      {{"a", link_attrs, [{"img", updated_attrs, children}]}, acc}
+    else
+      _ -> {{"img", attrs, children}, acc}
+    end
   end
 end

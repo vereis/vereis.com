@@ -2,6 +2,7 @@ defmodule Vereis.Assets.Parser do
   @moduledoc "Parses asset files (images, etc.) into Asset attributes with metadata."
 
   alias Vereis.Assets.Metadata.Image.LQIP
+  alias Vereis.Entries.Utils
   alias Vix.Vips.Image, as: VixImage
 
   @supported_extensions ~w(.png .jpg .jpeg .gif .webp .svg)
@@ -69,10 +70,7 @@ defmodule Vereis.Assets.Parser do
   defp derive_slug(filepath, base_dir) do
     filepath
     |> Path.relative_to(base_dir)
-    |> then(fn path ->
-      ext = Path.extname(path)
-      String.replace_suffix(path, ext, ".webp")
-    end)
+    |> Utils.swap_ext(".webp")
   end
 
   defp optimize_image(image, "image/svg" <> _) do
