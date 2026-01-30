@@ -5,6 +5,7 @@ defmodule VereisWeb.GraphQL.Resolvers.Entry do
   alias Vereis.Entries.Entry
   alias Vereis.Entries.Reference
   alias VereisWeb.GraphQL.Pagination
+  alias VereisWeb.GraphQL.Resolvers
 
   def node(%{type: :entry, id: id}, _resolution) do
     case Entries.get_entry(id: id) do
@@ -18,6 +19,10 @@ defmodule VereisWeb.GraphQL.Resolvers.Entry do
       nil -> {:error, "Reference not found"}
       reference -> {:ok, reference}
     end
+  end
+
+  def node(%{type: :service} = node, resolution) do
+    Resolvers.Service.node(node, resolution)
   end
 
   def node(_node, _resolution) do

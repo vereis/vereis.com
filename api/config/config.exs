@@ -32,6 +32,7 @@ config :vereis, VereisWeb.Endpoint,
 
 config :vereis,
   ecto_repos: [Vereis.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  env: config_env()
 
 import_config "#{config_env()}.exs"
