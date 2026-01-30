@@ -548,6 +548,26 @@ defmodule Vereis.Entries.ParserTest do
       assert fm_refs == []
     end
 
+    test "non-string values in references array are filtered out" do
+      content = """
+      ---
+      title: Test
+      references:
+        - elixir
+        - 123
+        - true
+        - null
+        - phoenix
+      ---
+
+      Content.
+      """
+
+      assert {:ok, {_entry_attrs, ref_attrs}} = Parser.parse("content/test.md", content, "content")
+      fm_refs = ref_attrs |> Enum.filter(&(&1.type == :frontmatter)) |> Enum.map(& &1.target_slug)
+      assert fm_refs == ["elixir", "phoenix"]
+    end
+
     test "handles mixed inline and frontmatter references" do
       content = """
       ---

@@ -38,7 +38,9 @@ defmodule Vereis.Entries.Parser do
 
   @spec parse(String.t(), String.t()) :: parse_result()
   def parse(filepath, base_dir) when is_binary(filepath) and is_binary(base_dir) do
-    parse(filepath, File.read!(filepath), base_dir)
+    with {:ok, content} <- File.read(filepath) do
+      parse(filepath, content, base_dir)
+    end
   end
 
   @spec parse(String.t(), String.t(), String.t()) :: parse_result()
@@ -96,6 +98,7 @@ defmodule Vereis.Entries.Parser do
           {"references", references}, {acc, _refs} when is_list(references) ->
             normalized_refs =
               references
+              |> Enum.filter(&is_binary/1)
               |> Enum.map(fn ref -> ref |> String.trim() |> String.trim_leading("/") end)
               |> Enum.reject(&(&1 == ""))
 
