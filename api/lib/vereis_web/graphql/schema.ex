@@ -7,14 +7,16 @@ defmodule VereisWeb.GraphQL.Schema do
 
   alias VereisWeb.GraphQL.Resolvers
 
-  import_types VereisWeb.GraphQL.Types.Scalars
+  import_types VereisWeb.GraphQL.Types.Asset
   import_types VereisWeb.GraphQL.Types.Entry
   import_types VereisWeb.GraphQL.Types.Reference
-  import_types VereisWeb.GraphQL.Types.Slug
+  import_types VereisWeb.GraphQL.Types.Scalars
   import_types VereisWeb.GraphQL.Types.Service
+  import_types VereisWeb.GraphQL.Types.Slug
 
   node interface do
     resolve_type fn
+      %Vereis.Assets.Asset{}, _ -> :asset
       %Vereis.Entries.Entry{}, _ -> :entry
       %Vereis.Entries.Reference{}, _ -> :reference
       %Vereis.Entries.Slug{}, _ -> :slug
@@ -38,6 +40,7 @@ defmodule VereisWeb.GraphQL.Schema do
       resolve(&Resolvers.Entry.node/2)
     end
 
+    import_fields :asset_queries
     import_fields :entry_queries
     import_fields :slug_queries
 

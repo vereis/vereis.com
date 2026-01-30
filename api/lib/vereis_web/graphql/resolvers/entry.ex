@@ -1,11 +1,19 @@
 defmodule VereisWeb.GraphQL.Resolvers.Entry do
   @moduledoc "GraphQL resolvers for Entry queries."
 
+  alias Vereis.Assets
   alias Vereis.Entries
   alias Vereis.Entries.Entry
   alias Vereis.Entries.Reference
   alias VereisWeb.GraphQL.Pagination
   alias VereisWeb.GraphQL.Resolvers
+
+  def node(%{type: :asset, id: id}, _resolution) do
+    case Assets.get_asset(id: id) do
+      nil -> {:error, "Asset not found"}
+      asset -> {:ok, asset}
+    end
+  end
 
   def node(%{type: :entry, id: id}, _resolution) do
     case Entries.get_entry(id: id) do
