@@ -19,6 +19,17 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+config :vereis, Oban,
+  engine: Oban.Engines.Lite,
+  repo: Vereis.Repo,
+  queues: [imports: 1],
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"@reboot", Vereis.Importer}
+     ]}
+  ]
+
 # Configure the endpoint
 config :vereis, VereisWeb.Endpoint,
   url: [host: "localhost"],
@@ -33,6 +44,7 @@ config :vereis, VereisWeb.Endpoint,
 config :vereis,
   ecto_repos: [Vereis.Repo],
   generators: [timestamp_type: :utc_datetime],
-  env: config_env()
+  env: config_env(),
+  content_dir: "priv/content"
 
 import_config "#{config_env()}.exs"

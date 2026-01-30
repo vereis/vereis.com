@@ -7,6 +7,8 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix,
   sort_verified_routes_query_params: true
 
+config :vereis, Oban, testing: :manual
+
 config :vereis, Vereis.Repo,
   database: Path.expand("../vereis_test.db", __DIR__),
   pool_size: 5,

@@ -79,7 +79,8 @@ defmodule Vereis.MixProject do
       {:floki, "~> 0.36"},
       {:html5ever, "~> 0.17"},
       {:polymorphic_embed, "~> 5.0"},
-      {:vix, "~> 0.33"}
+      {:vix, "~> 0.33"},
+      {:oban, "~> 2.18"}
     ]
   end
 

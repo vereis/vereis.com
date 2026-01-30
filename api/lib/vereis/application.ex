@@ -9,6 +9,7 @@ defmodule Vereis.Application do
       VereisWeb.Telemetry,
       Vereis.Repo,
       {Ecto.Migrator, repos: Application.fetch_env!(:vereis, :ecto_repos), skip: skip_migrations?()},
+      {Oban, Application.fetch_env!(:vereis, Oban)},
       {DNSCluster, query: Application.get_env(:vereis, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Vereis.PubSub},
       VereisWeb.Endpoint

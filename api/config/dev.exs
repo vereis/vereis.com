@@ -9,6 +9,9 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   debug_attributes: true
 
+# Global peer lowers latency for @reboot jobs in local dev.
+config :vereis, Oban, peer: Oban.Peers.Global
+
 config :vereis, Vereis.Repo,
   database: Path.expand("../vereis_dev.db", __DIR__),
   pool_size: 5,
