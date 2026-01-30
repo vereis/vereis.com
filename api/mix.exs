@@ -77,7 +77,9 @@ defmodule Vereis.MixProject do
       {:yaml_elixir, "~> 2.11"},
       {:mdex, "~> 0.2"},
       {:floki, "~> 0.36"},
-      {:html5ever, "~> 0.17"}
+      {:html5ever, "~> 0.17"},
+      {:polymorphic_embed, "~> 5.0"},
+      {:vix, "~> 0.33"}
     ]
   end
 

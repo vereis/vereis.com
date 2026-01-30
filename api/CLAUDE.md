@@ -27,6 +27,32 @@ This is a web application written using the Phoenix web framework.
         Repo.all(User.query(:list, active: true))
       end
 
+- When implementing `query/2` in a schema, **don't** write explicit clauses for simple exact-match filters on schema fields. The `Queryable.apply_filter/2` fallback automatically handles `{:field_name, value}` filters for any field in the schema.
+
+  **Never do this (redundant)**:
+
+      def query(base_query \\ base_query(), filters) do
+        Enum.reduce(filters, base_query, fn
+          {:slug, slug}, query when is_binary(slug) ->
+            from a in query, where: a.slug == ^slug
+
+          {key, value}, query ->
+            apply_filter(query, {key, value})
+        end)
+      end
+
+  Instead, **only** add explicit clauses for filters that need custom logic (prefixes, ranges, joins, etc.):
+
+      def query(base_query \\ base_query(), filters) do
+        Enum.reduce(filters, base_query, fn
+          {:content_type_prefix, prefix}, query when is_binary(prefix) ->
+            from a in query, where: like(a.content_type, ^"#{prefix}%")
+
+          {key, value}, query ->
+            apply_filter(query, {key, value})
+        end)
+      end
+
 - GraphQL APIs **must** be minimal wrappers over existing context functions. **Never** implement business logic or data access directly in GraphQL resolvers.
 
   **Never do this (invalid)**:
