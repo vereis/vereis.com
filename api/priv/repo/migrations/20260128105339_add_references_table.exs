@@ -1,4 +1,5 @@
 defmodule Vereis.Repo.Migrations.AddReferencesTable do
+  # excellent_migrations:safety-assured-for-this-file column-reference-added
   use Ecto.Migration
 
   def change do

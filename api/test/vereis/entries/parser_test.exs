@@ -199,7 +199,7 @@ defmodule Vereis.Entries.ParserTest do
 
       assert {:ok, {entry_attrs, _ref_attrs}} = Parser.parse("content/test.md", content, "content")
 
-      assert result.headings == [
+      assert entry_attrs.headings == [
                %{level: 1, title: "Hello World", link: "hello-world"},
                %{level: 2, title: "Getting Started", link: "getting-started"},
                %{level: 3, title: "Advanced Topics", link: "advanced-topics"}

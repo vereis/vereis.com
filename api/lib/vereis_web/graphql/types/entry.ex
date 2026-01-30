@@ -18,13 +18,16 @@ defmodule VereisWeb.GraphQL.Types.Entry do
     field :link, non_null(:string)
   end
 
-  @desc "A wiki or blog entry"
+  @desc "A wiki or blog entry (or stub)"
   node object(:entry) do
     @desc "URL slug (path)"
     field :slug, non_null(:string)
 
     @desc "Entry title"
     field :title, non_null(:string)
+
+    @desc "Entry type (entry with content, or stub placeholder)"
+    field :type, non_null(:entry_type)
 
     @desc "Description or excerpt"
     field :description, :string
@@ -67,18 +70,33 @@ defmodule VereisWeb.GraphQL.Types.Entry do
   @desc "Relay connection for paginated entries"
   connection(node_type: :entry)
 
+  @desc "Entry type discriminator"
+  enum :entry_type do
+    value :entry, description: "Full entry with content"
+    value :stub, description: "Stub entry (referenced but not created)"
+  end
+
   @desc "Sort direction"
   enum :order_direction do
-    value(:asc, description: "Ascending order")
-    value(:desc, description: "Descending order")
+    value :asc, description: "Ascending order"
+    value :desc, description: "Descending order"
   end
 
   @desc "Ordering options for entries"
   input_object :entry_order_by do
-    field(:slug, :order_direction)
-    field(:title, :order_direction)
-    field(:published_at, :order_direction)
-    field(:inserted_at, :order_direction)
-    field(:updated_at, :order_direction)
+    field :slug, :order_direction
+    field :title, :order_direction
+    field :published_at, :order_direction
+    field :inserted_at, :order_direction
+    field :updated_at, :order_direction
+    field :type, :order_direction
+  end
+
+  @desc "Ordering options for references"
+  input_object :reference_order_by do
+    field :inserted_at, :order_direction
+    field :source_slug, :order_direction
+    field :target_slug, :order_direction
+    field :type, :order_direction
   end
 end
